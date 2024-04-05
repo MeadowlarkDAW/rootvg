@@ -1,5 +1,9 @@
 <h1><img src="./assets/logo.svg" width="64px" height="64px"/> RootVG</h1>
 
+[![Documentation](https://docs.rs/rootvg/badge.svg)](https://docs.rs/rootvg)
+[![Crates.io](https://img.shields.io/crates/v/rootvg.svg)](https://crates.io/crates/rootvg)
+[![License](https://img.shields.io/crates/l/rootvg.svg)](https://github.com/MeadowlarkDAW/rootvg/blob/main/LICENSE)
+
 A 2D vector graphics library optimized for GUIs, written in Rust and [wgpu](https://github.com/gfx-rs/wgpu)
 
 <div align="center">
