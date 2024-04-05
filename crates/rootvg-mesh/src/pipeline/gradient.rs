@@ -193,7 +193,7 @@ impl GradientMeshPipeline {
                 "\n",
                 include_str!("../shader/gradient.wgsl"),
                 "\n",
-                include_str!("../../../rootvg-core/src/shader/oklab.wgsl"),
+                include_str!("../shader/oklab.wgsl"),
             ))),
         });
 
