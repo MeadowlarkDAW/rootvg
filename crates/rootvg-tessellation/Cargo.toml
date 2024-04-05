@@ -17,8 +17,8 @@ default = ["gradient"]
 gradient = ["rootvg-core/gradient", "rootvg-mesh/gradient"]
 
 [dependencies]
-rootvg-core = { path = "../rootvg-core", default-features = false }
-rootvg-mesh = { path = "../rootvg-mesh", default-features = false }
+rootvg-core = { version = "0.1", path = "../rootvg-core", default-features = false }
+rootvg-mesh = { version = "0.1", path = "../rootvg-mesh", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 lyon = "1.0.1"
