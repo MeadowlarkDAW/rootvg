@@ -1,0 +1,25 @@
+[package]
+name = "rootvg-core"
+version = "0.1.0"
+description = "Core library for RootVG"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["gradient"]
+gradient = ["dep:half"]
+
+[dependencies]
+wgpu.workspace = true
+rgb.workspace = true
+log.workspace = true
+euclid.workspace = true
+bytemuck.workspace = true
+half = { workspace = true, optional = true }

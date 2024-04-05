@@ -1,0 +1,21 @@
+[package]
+name = "rootvg-text"
+version = "0.1.0"
+description = "Text primitive for RootVG"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rootvg-core = { path = "../rootvg-core", default-features = false }
+wgpu.workspace = true
+thiserror.workspace = true
+bytemuck.workspace = true
+once_cell = "1.19.0"
+glyphon = "0.5.0"

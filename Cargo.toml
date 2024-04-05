@@ -1,0 +1,104 @@
+[package]
+name = "rootvg"
+version = "0.1.0"
+description = "A 2D vector graphics library optimized for GUIs"
+readme = "README.md"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[workspace]
+members = [
+    "crates/rootvg-core",
+    "crates/rootvg-image",
+    "crates/rootvg-mesh",
+    "crates/rootvg-msaa",
+    "crates/rootvg-quad",
+    "crates/rootvg-tessellation",
+    "crates/rootvg-text",
+]
+
+[workspace.package]
+name = "rootvg"
+edition = "2021"
+authors = ["Billy Messenger <60663878+BillyDM@users.noreply.github.com>"]
+license = "MIT"
+homepage = "https://github.com/MeadowlarkDAW/rootvg"
+documentation = "https://docs.rs/rootvg"
+repository = "https://github.com/MeadowlarkDAW/rootvg"
+categories = ["graphics", "rendering", "rendering::engine"]
+keywords = ["vector", "graphics", "gpu", "2d"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "default-surface"]
+## Enables drawing meshes of triangles
+mesh = ["dep:rootvg-mesh"]
+## Enables anti-aliasing using MSAA. This only effects mesh primitives, so consider
+## disabling this if the `mesh` and `tessellation` features are disabled.
+msaa = ["dep:rootvg-msaa"]
+## Enables drawing of quads
+quad = ["dep:rootvg-quad"]
+## Enables using lyon to tessellate vector shapes into a mesh for rendering
+tessellation = ["dep:rootvg-tessellation", "dep:rootvg-mesh"]
+## Enables drawing of text
+text = ["dep:rootvg-text"]
+## Enables drawing of images
+image = ["dep:rootvg-image"]
+## Enables filling quads and meshes with gradients
+gradient = ["rootvg-core/gradient", "rootvg-quad?/gradient", "rootvg-mesh?/gradient", "rootvg-tessellation?/gradient"]
+## Enables support for custom primitives
+custom-primitive = []
+## Enables a default wgpu surface configuration
+default-surface = ["dep:pollster"]
+
+[dependencies]
+rootvg-core = { path = "crates/rootvg-core", default-features = false }
+rootvg-image = { path = "crates/rootvg-image", optional = true }
+rootvg-mesh = { path = "crates/rootvg-mesh", default-features = false, optional = true }
+rootvg-msaa = { path = "crates/rootvg-msaa", optional = true }
+rootvg-quad = { path = "crates/rootvg-quad", default-features = false, optional = true }
+rootvg-tessellation = { path = "crates/rootvg-tessellation", default-features = false, optional = true }
+rootvg-text = { path = "crates/rootvg-text", optional = true }
+pollster = { version = "0.3.0", optional = true }
+rustc-hash.workspace = true
+log.workspace = true
+smallvec.workspace = true
+thiserror.workspace = true
+wgpu.workspace = true
+
+[dev-dependencies]
+winit.workspace = true
+wgpu = { version = "0.19" }
+pollster = "0.3.0"
+env_logger.workspace = true
+bytemuck.workspace = true
+rustc-hash.workspace = true
+image = { version = "0.25.0", default-features = false, features = ["rayon", "png"] }
+
+[workspace.dependencies]
+rgb = "0.8.37"
+smallvec = "1.13.1"
+rustc-hash = "1.1.0"
+euclid = { version = "0.22.9", default-features = false }
+wgpu = { version = "0.19.3", default-features = false, features = ["wgsl"] }
+bytemuck = { version = "1.14.1", features = ["derive"] }
+log = "0.4.21"
+winit = { version = "0.29.10", features = ["rwh_05"] }
+env_logger = "0.11.3"
+thiserror = "1.0.57"
+half = "2.3.1"
+
+[[example]]
+name = "custom_primitive"
+path = "examples/custom_primitive.rs"
+required-features = ["custom-primitive"]

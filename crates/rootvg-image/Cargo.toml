@@ -1,0 +1,22 @@
+[package]
+name = "rootvg-image"
+version = "0.1.0"
+description = "Image primitive for RootVG"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rootvg-core = { path = "../rootvg-core", default-features = false }
+wgpu.workspace = true
+thiserror.workspace = true
+bytemuck.workspace = true
+rustc-hash.workspace = true
+smallvec.workspace = true
+image = { version = "0.25.0", default-features = false }
