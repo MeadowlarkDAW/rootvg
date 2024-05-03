@@ -1,6 +1,7 @@
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use std::{cell::RefCell, ops::Range, rc::Rc};
+use wgpu::PipelineCompilationOptions;
 
 use rootvg_core::{
     buffer::Buffer,
@@ -221,6 +222,7 @@ impl ImagePipeline {
                         7 => Uint32,
                     ),
                 }],
+                compilation_options: PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -241,6 +243,7 @@ impl ImagePipeline {
                     }),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,

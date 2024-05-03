@@ -11,6 +11,7 @@ mod my_custom_primitive {
         },
     };
     use rustc_hash::FxHashMap;
+    use wgpu::PipelineCompilationOptions;
 
     const INITIAL_INSTANCES: usize = 8;
 
@@ -82,6 +83,7 @@ mod my_custom_primitive {
                             2 => Float32x2,
                         ),
                     }],
+                    compilation_options: PipelineCompilationOptions::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
@@ -102,6 +104,7 @@ mod my_custom_primitive {
                         }),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
+                    compilation_options: PipelineCompilationOptions::default(),
                 }),
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
@@ -302,172 +305,232 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 use std::sync::Arc;
 use winit::{
-    event::{Event, WindowEvent},
-    event_loop::EventLoop,
-    window::WindowBuilder,
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop},
+    window::{Window, WindowId},
 };
 
-use rootvg::color::RGBA8;
 use rootvg::math::{PhysicalSizeI32, Point, Rect, ScaleFactor, Size};
 use rootvg::quad::{SolidQuad, SolidQuadPrimitive};
+use rootvg::{color::RGBA8, pipeline::CustomPrimitive, surface::DefaultSurface, Canvas};
 
 use self::my_custom_primitive::{MyCustomPrimitive, MyCustomPrimitivePipeline};
+
+const WINDOW_SIZE: (f32, f32) = (800.0, 425.0);
 
 fn main() {
     // Set up logging stuff
     let env = env_logger::Env::default().filter_or("LOG_LEVEL", "info");
     env_logger::init_from_env(env);
 
-    // --- Set up winit window -----------------------------------------------------------
-
-    let (width, height) = (800, 425);
     let event_loop = EventLoop::new().unwrap();
-    let window = Arc::new(
-        WindowBuilder::new()
-            .with_inner_size(winit::dpi::LogicalSize::new(width as f64, height as f64))
-            .with_title("RootVG Demo")
-            .build(&event_loop)
-            .unwrap(),
-    );
-    let physical_size = window.inner_size();
-    // RootVG uses integers to represent physical pixels instead of unsigned integers.
-    let mut physical_size =
-        PhysicalSizeI32::new(physical_size.width as i32, physical_size.height as i32);
-    let mut scale_factor: ScaleFactor = window.scale_factor().into();
-
-    // --- Surface -----------------------------------------------------------------------
-
-    // RootVG provides an optional default wgpu surface configuration for convenience.
-    let mut surface = rootvg::surface::DefaultSurface::new(
-        physical_size,
-        scale_factor,
-        Arc::clone(&window),
-        rootvg::surface::DefaultSurfaceConfig::default(),
-    )
-    .unwrap();
-
-    let mut canvas_config = surface.canvas_config();
-    canvas_config.num_custom_pipelines = 1;
-
-    // --- Initialize custom pipeline ----------------------------------------------------
-
-    let mut my_custom_pipeline = MyCustomPrimitivePipeline::new(
-        0,
-        &surface.device,
-        surface.format(),
-        canvas_config.multisample,
-    );
-
-    // --- Canvas ------------------------------------------------------------------------
-
-    // A `Canvas` automatically batches primitives and renders them to a
-    // render target (such as the output framebuffer).
-    let mut canvas = rootvg::Canvas::new(
-        &surface.device,
-        &surface.queue,
-        surface.format(),
-        canvas_config,
-    );
-
-    // --- Create custom primitives ------------------------------------------------------
-
-    let custom_primitive_1 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
-        color: RGBA8::new(255, 0, 0, 255).into(),
-        position: Point::new(110.0, 100.0).into(),
-        size: Size::new(100.0, 100.0).into(),
-    });
-
-    let mut custom_primitive_2 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
-        color: RGBA8::new(0, 255, 255, 255).into(),
-        position: Point::new(100.0, 100.0).into(),
-        size: Size::new(100.0, 100.0).into(),
-    });
-    custom_primitive_2.offset = Point::new(100.0, 100.0);
-
-    // -----------------------------------------------------------------------------------
-
     event_loop
-        .run(move |event, target| {
-            if let Event::WindowEvent {
-                window_id: _,
-                event,
-            } = event
-            {
-                match event {
-                    // Resize the Canvas to match the new window size
-                    WindowEvent::Resized(new_size) => {
-                        physical_size =
-                            PhysicalSizeI32::new(new_size.width as i32, new_size.height as i32);
-                        surface.resize(physical_size, scale_factor);
-                        window.request_redraw();
-                    }
-                    WindowEvent::ScaleFactorChanged {
-                        scale_factor: new_scale,
-                        inner_size_writer: _,
-                    } => {
-                        scale_factor = new_scale.into();
-                        surface.resize(physical_size, scale_factor);
-                        window.request_redraw();
-                    }
-                    WindowEvent::RedrawRequested => {
-                        {
-                            let mut cx = canvas.begin(physical_size, scale_factor);
-
-                            // Demonstrate that the custom primitives are indeed being drawn
-                            // as part of the canvas's render pass by drawing a quad below and
-                            // above it.
-
-                            cx.add(SolidQuadPrimitive::new(&SolidQuad {
-                                bounds: Rect::new(Point::new(100.0, 50.0), Size::new(200.0, 200.0)),
-                                bg_color: RGBA8::new(100, 100, 100, 255).into(),
-                                ..Default::default()
-                            }));
-
-                            cx.set_z_index(1);
-
-                            cx.add(custom_primitive_1.clone());
-                            cx.add(custom_primitive_2.clone());
-
-                            cx.set_z_index(2);
-
-                            cx.add(SolidQuadPrimitive::new(&SolidQuad {
-                                bounds: Rect::new(Point::new(275.0, 70.0), Size::new(200.0, 200.0)),
-                                bg_color: RGBA8::new(200, 100, 200, 100).into(),
-                                ..Default::default()
-                            }));
-                        }
-
-                        // Set up the frame and wgpu encoder.
-                        let frame = surface.get_current_texture().unwrap();
-                        let view = frame
-                            .texture
-                            .create_view(&wgpu::TextureViewDescriptor::default());
-                        let mut encoder = surface.device.create_command_encoder(
-                            &wgpu::CommandEncoderDescriptor { label: None },
-                        );
-
-                        // Render the canvas to the target texture.
-                        canvas
-                            .render_to_target(
-                                Some(RGBA8::new(0, 0, 0, 255).into()),
-                                &surface.device,
-                                &surface.queue,
-                                &mut encoder,
-                                &view,
-                                physical_size,
-                                &mut [&mut my_custom_pipeline],
-                            )
-                            .unwrap();
-
-                        // Submit the commands and present the frame.
-                        surface.queue.submit(Some(encoder.finish()));
-                        frame.present();
-                    }
-                    WindowEvent::CloseRequested => target.exit(),
-                    _ => {}
-                }
-            }
-        })
+        .run_app(&mut CustomPrimitiveApp { state: None })
         .unwrap();
 }
 
+struct State {
+    window: Arc<Window>,
+    physical_size: PhysicalSizeI32,
+    scale_factor: ScaleFactor,
+    surface: DefaultSurface,
+    canvas: Canvas,
+
+    my_custom_pipeline: MyCustomPrimitivePipeline,
+    custom_primitive_1: CustomPrimitive,
+    custom_primitive_2: CustomPrimitive,
+}
+
+struct CustomPrimitiveApp {
+    state: Option<State>,
+}
+
+impl CustomPrimitiveApp {
+    fn create_window(&mut self, event_loop: &ActiveEventLoop) {
+        // --- Set up winit window -----------------------------------------------------------
+
+        let window_attributes = Window::default_attributes()
+            .with_inner_size(winit::dpi::LogicalSize::new(
+                WINDOW_SIZE.0 as f64,
+                WINDOW_SIZE.1 as f64,
+            ))
+            .with_title("RootVG Custom Primitive Demo");
+        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+
+        let physical_size = window.inner_size();
+        // RootVG uses integers to represent physical pixels instead of unsigned integers.
+        let physical_size =
+            PhysicalSizeI32::new(physical_size.width as i32, physical_size.height as i32);
+        let scale_factor: ScaleFactor = window.scale_factor().into();
+
+        // --- Surface -----------------------------------------------------------------------
+
+        // RootVG provides an optional default wgpu surface configuration for convenience.
+        let surface = rootvg::surface::DefaultSurface::new(
+            physical_size,
+            scale_factor,
+            Arc::clone(&window),
+            rootvg::surface::DefaultSurfaceConfig {
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let mut canvas_config = surface.canvas_config();
+        canvas_config.num_custom_pipelines = 1;
+
+        // --- Initialize custom pipeline ----------------------------------------------------
+
+        let mut my_custom_pipeline = MyCustomPrimitivePipeline::new(
+            0,
+            &surface.device,
+            surface.format(),
+            canvas_config.multisample,
+        );
+
+        // --- Canvas ------------------------------------------------------------------------
+
+        // A `Canvas` automatically batches primitives and renders them to a
+        // render target (such as the output framebuffer).
+        let canvas = rootvg::Canvas::new(
+            &surface.device,
+            &surface.queue,
+            surface.format(),
+            canvas_config,
+        );
+
+        // --- Create custom primitives ------------------------------------------------------
+
+        let custom_primitive_1 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
+            color: RGBA8::new(255, 0, 0, 255).into(),
+            position: Point::new(110.0, 100.0).into(),
+            size: Size::new(100.0, 100.0).into(),
+        });
+
+        let mut custom_primitive_2 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
+            color: RGBA8::new(0, 255, 255, 255).into(),
+            position: Point::new(100.0, 100.0).into(),
+            size: Size::new(100.0, 100.0).into(),
+        });
+        custom_primitive_2.offset = Point::new(100.0, 100.0);
+
+        self.state = Some(State {
+            window,
+            physical_size,
+            scale_factor,
+            surface,
+            canvas,
+            my_custom_pipeline,
+            custom_primitive_1,
+            custom_primitive_2,
+        });
+    }
+}
+
+impl ApplicationHandler for CustomPrimitiveApp {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        if self.state.is_none() {
+            self.create_window(event_loop);
+        }
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _window_id: WindowId,
+        event: WindowEvent,
+    ) {
+        let Some(state) = &mut self.state else {
+            return;
+        };
+
+        match event {
+            WindowEvent::RedrawRequested => {
+                {
+                    let mut cx = state.canvas.begin(state.physical_size, state.scale_factor);
+
+                    // Demonstrate that the custom primitives are indeed being drawn
+                    // as part of the canvas's render pass by drawing a quad below and
+                    // above it.
+
+                    cx.add(SolidQuadPrimitive::new(&SolidQuad {
+                        bounds: Rect::new(Point::new(100.0, 50.0), Size::new(200.0, 200.0)),
+                        bg_color: RGBA8::new(100, 100, 100, 255).into(),
+                        ..Default::default()
+                    }));
+
+                    cx.set_z_index(1);
+
+                    cx.add(state.custom_primitive_1.clone());
+                    cx.add(state.custom_primitive_2.clone());
+
+                    cx.set_z_index(2);
+
+                    cx.add(SolidQuadPrimitive::new(&SolidQuad {
+                        bounds: Rect::new(Point::new(275.0, 70.0), Size::new(200.0, 200.0)),
+                        bg_color: RGBA8::new(200, 100, 200, 100).into(),
+                        ..Default::default()
+                    }));
+                }
+
+                // Set up the frame and wgpu encoder.
+                let frame = state.surface.get_current_texture().unwrap();
+                let view = frame
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+                let mut encoder = state
+                    .surface
+                    .device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+                // Render the canvas to the target texture.
+                state
+                    .canvas
+                    .render_to_target(
+                        Some(RGBA8::new(0, 0, 0, 255).into()),
+                        &state.surface.device,
+                        &state.surface.queue,
+                        &mut encoder,
+                        &view,
+                        state.physical_size,
+                        &mut [&mut state.my_custom_pipeline],
+                    )
+                    .unwrap();
+
+                state.window.pre_present_notify();
+
+                // Submit the commands and present the frame.
+                state.surface.queue.submit(Some(encoder.finish()));
+                frame.present();
+            }
+            // Resize the Canvas to match the new window size
+            WindowEvent::Resized(new_size) => {
+                state.physical_size =
+                    PhysicalSizeI32::new(new_size.width as i32, new_size.height as i32);
+                state
+                    .surface
+                    .resize(state.physical_size, state.scale_factor);
+                state.window.request_redraw();
+            }
+            WindowEvent::ScaleFactorChanged {
+                scale_factor: new_scale,
+                inner_size_writer: _,
+            } => {
+                state.scale_factor = new_scale.into();
+                state
+                    .surface
+                    .resize(state.physical_size, state.scale_factor);
+                state.window.request_redraw();
+            }
+            WindowEvent::CloseRequested => event_loop.exit(),
+            _ => {}
+        }
+    }
+
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        // Be sure to drop the wgpu surface before the window closes,
+        // or else the program might segfault.
+        self.state = None;
+    }
+}

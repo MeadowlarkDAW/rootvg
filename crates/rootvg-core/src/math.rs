@@ -1,10 +1,8 @@
 use std::ops::{Div, Mul};
 
-/*
-/// Units in logical points.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Logical;
-*/
+use euclid::UnknownUnit;
+
+pub type ZIndex = u16;
 
 /// Units in physical pixels.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -64,6 +62,12 @@ pub type RectI32 = euclid::default::Rect<i32>;
 ///
 /// Alias for ```euclid::Angle<f32>```
 pub type Angle = euclid::Angle<f32>;
+
+/// A group of 2D side offsets, which correspond to top/right/bottom/left for borders,
+/// padding,and margins in CSS, optionally tagged with a unit.
+///
+/// Alias for ```euclid::SideOffsets2D<f32, UnknownUnit>```
+pub type SideOffsets = euclid::SideOffsets2D<f32, UnknownUnit>;
 
 /*
 /// A point in units of logical points.

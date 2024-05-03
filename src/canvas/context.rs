@@ -1,3 +1,5 @@
+use rootvg_core::math::ZIndex;
+
 use crate::math::{Point, PointI32, RectI32};
 use crate::primitive_group::{PrimitiveBatchKind, PrimitiveGroup};
 use crate::Primitive;
@@ -24,11 +26,11 @@ impl<'a> CanvasCtx<'a> {
         self.canvas.scissor_rect
     }
 
-    pub fn set_z_index(&mut self, z_index: u16) {
+    pub fn set_z_index(&mut self, z_index: ZIndex) {
         self.canvas.z_index = z_index;
     }
 
-    pub fn z_index(&mut self) -> u16 {
+    pub fn z_index(&mut self) -> ZIndex {
         self.canvas.z_index
     }
 
@@ -123,22 +125,24 @@ impl<'a> CanvasCtx<'a> {
     }
 
     pub fn add_group(&mut self, group: &PrimitiveGroup) {
-        self.add_group_with_offset(group, PointI32::new(0, 0));
+        self.add_group_with_offset(group, Point::new(0.0, 0.0));
     }
 
-    pub fn add_group_with_offset(&mut self, group: &PrimitiveGroup, offset: PointI32) {
+    pub fn add_group_with_offset(&mut self, group: &PrimitiveGroup, offset: Point) {
         if self.canvas.scissor_rect_out_of_bounds {
             return;
         }
 
-        let offset_f32 = Point::new(offset.x as f32, offset.y as f32);
-
         for batch in group.primitive_batches.iter() {
             let scissor_rect = if let Some(scissor_rect) = batch.scissor_rect {
-                let Some(c) =
-                    super::offset_scissor_rect(scissor_rect, offset, self.canvas.logical_size_i32)
-                else {
-                    // Clip rect is off screen
+                let offset_i32 = PointI32::new(offset.x.round() as i32, offset.y.round() as i32);
+
+                let Some(c) = super::offset_scissor_rect(
+                    scissor_rect,
+                    offset_i32,
+                    self.canvas.logical_size_i32,
+                ) else {
+                    // Scissor rect is off screen
                     continue;
                 };
                 c
@@ -159,8 +163,8 @@ impl<'a> CanvasCtx<'a> {
                 PrimitiveBatchKind::SolidQuad(quads) => {
                     for quad in quads.iter() {
                         let mut quad_copy = *quad;
-                        quad_copy.position[0] += offset_f32.x;
-                        quad_copy.position[1] += offset_f32.y;
+                        quad_copy.position[0] += offset.x;
+                        quad_copy.position[1] += offset.y;
 
                         batch_entry.solid_quads.push(quad_copy);
                     }
@@ -169,8 +173,8 @@ impl<'a> CanvasCtx<'a> {
                 PrimitiveBatchKind::GradientQuad(quads) => {
                     for quad in quads.iter() {
                         let mut quad_copy = *quad;
-                        quad_copy.position[0] += offset_f32.x;
-                        quad_copy.position[1] += offset_f32.y;
+                        quad_copy.position[0] += offset.x;
+                        quad_copy.position[1] += offset.y;
 
                         batch_entry.gradient_quads.push(quad_copy);
                     }
@@ -179,8 +183,8 @@ impl<'a> CanvasCtx<'a> {
                 PrimitiveBatchKind::Text(text) => {
                     for t in text.iter() {
                         let mut t_copy = t.clone();
-                        t_copy.pos.x += offset_f32.x;
-                        t_copy.pos.y += offset_f32.y;
+                        t_copy.pos.x += offset.x;
+                        t_copy.pos.y += offset.y;
 
                         batch_entry.text.push(t_copy);
                     }
@@ -190,8 +194,8 @@ impl<'a> CanvasCtx<'a> {
                     for mesh in meshes.iter() {
                         let mut mesh_copy = mesh.clone();
 
-                        mesh_copy.uniform.offset[0] += offset_f32.x;
-                        mesh_copy.uniform.offset[1] += offset_f32.y;
+                        mesh_copy.uniform.offset[0] += offset.x;
+                        mesh_copy.uniform.offset[1] += offset.y;
 
                         batch_entry.solid_meshes.push(mesh_copy);
                     }
@@ -201,8 +205,8 @@ impl<'a> CanvasCtx<'a> {
                     for mesh in meshes.iter() {
                         let mut mesh_copy = mesh.clone();
 
-                        mesh_copy.uniform.offset[0] += offset_f32.x;
-                        mesh_copy.uniform.offset[1] += offset_f32.y;
+                        mesh_copy.uniform.offset[0] += offset.x;
+                        mesh_copy.uniform.offset[1] += offset.y;
 
                         batch_entry.gradient_meshes.push(mesh_copy);
                     }
@@ -212,8 +216,8 @@ impl<'a> CanvasCtx<'a> {
                     for image in images.iter() {
                         let mut image_copy = image.clone();
 
-                        image_copy.vertex.position[0] += offset_f32.x;
-                        image_copy.vertex.position[1] += offset_f32.y;
+                        image_copy.vertex.position[0] += offset.x;
+                        image_copy.vertex.position[1] += offset.y;
 
                         batch_entry.images.push(image_copy);
                     }
@@ -236,10 +240,7 @@ impl<'a> CanvasCtx<'a> {
 
                         custom_batch.push(QueuedCustomPrimitive {
                             id: p.id,
-                            offset: Point::new(
-                                p.offset.x + offset_f32.x,
-                                p.offset.y + offset_f32.y,
-                            ),
+                            offset: Point::new(p.offset.x + offset.x, p.offset.y + offset.y),
                         });
                     }
                 }

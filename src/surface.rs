@@ -65,8 +65,8 @@ impl Default for DefaultSurfaceConfig {
 pub struct DefaultSurface {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
-    surface: wgpu::Surface<'static>,
-    surface_config: wgpu::SurfaceConfiguration,
+    pub surface: wgpu::Surface<'static>,
+    pub surface_config: wgpu::SurfaceConfiguration,
     scale_factor: ScaleFactor,
 
     #[cfg(feature = "msaa")]

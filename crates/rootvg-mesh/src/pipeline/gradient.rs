@@ -5,6 +5,7 @@ use rootvg_core::{
     math::{PhysicalSizeI32, ScaleFactor},
     pipeline::DefaultConstantUniforms,
 };
+use wgpu::PipelineCompilationOptions;
 
 use crate::{GradientMeshPrimitive, GradientVertex2D};
 
@@ -223,11 +224,13 @@ impl GradientMeshPipeline {
                         6 => Float32x4
                     ),
                 }],
+                compilation_options: PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "gradient_fs_main",
                 targets: &super::color_target_state(format),
+                compilation_options: PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,

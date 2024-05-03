@@ -174,5 +174,5 @@ fn shape(
         }
     }
 
-    buffer.shape_until_scroll(font_system);
+    buffer.shape_until_scroll(font_system, true);
 }
