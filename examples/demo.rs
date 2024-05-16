@@ -144,9 +144,6 @@ impl DemoApp {
                 // A large radius turns this quad into a circle.
                 radius: 50.0.into(),
             },
-            // An optional drop shadow can be added to the quad. By default
-            // no drop shadow is rendered.
-            shadow: Default::default(),
         }
         .into();
 

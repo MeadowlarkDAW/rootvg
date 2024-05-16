@@ -17,6 +17,8 @@ struct TextBufferInner {
 #[derive(Debug)]
 pub struct RcTextBuffer {
     inner: Rc<RefCell<TextBufferInner>>,
+    /// Used to quickly diff text primitives for changes.
+    generation: u64,
 }
 
 impl RcTextBuffer {
@@ -41,6 +43,7 @@ impl RcTextBuffer {
                 bounds_size,
                 has_text,
             })),
+            generation: 0,
         }
     }
 
@@ -93,6 +96,8 @@ impl RcTextBuffer {
         }
 
         inner.props = props;
+
+        self.generation += 1;
     }
 
     pub fn set_text(&mut self, text: &str) {
@@ -113,6 +118,8 @@ impl RcTextBuffer {
         if *has_text {
             shape(raw_buffer, font_system.raw_mut(), props.align);
         }
+
+        self.generation += 1;
     }
 
     /// Set the bounds of the text in logical points.
@@ -141,6 +148,8 @@ impl RcTextBuffer {
         if *has_text {
             shape(raw_buffer, font_system.raw_mut(), props.align);
         }
+
+        self.generation += 1;
     }
 
     pub(crate) fn raw_buffer<'a>(&'a self) -> Ref<'a, glyphon::Buffer> {
@@ -153,13 +162,14 @@ impl Clone for RcTextBuffer {
     fn clone(&self) -> Self {
         Self {
             inner: Rc::clone(&self.inner),
+            generation: self.generation,
         }
     }
 }
 
 impl PartialEq for RcTextBuffer {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
+        Rc::ptr_eq(&self.inner, &other.inner) && self.generation == other.generation
     }
 }
 

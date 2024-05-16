@@ -10,9 +10,9 @@ struct SolidVertexInput {
     @location(3) border_color: vec4<f32>,
     @location(4) border_radius: vec4<f32>,
     @location(5) border_width: f32,
-    @location(6) shadow_color: vec4<f32>,
-    @location(7) shadow_offset: vec2<f32>,
-    @location(8) shadow_blur_radius: f32,
+    //@location(6) shadow_color: vec4<f32>,
+    //@location(7) shadow_offset: vec2<f32>,
+    //@location(8) shadow_blur_radius: f32,
 }
 
 struct SolidVertexOutput {
@@ -23,9 +23,9 @@ struct SolidVertexOutput {
     @location(3) size: vec2<f32>,
     @location(4) border_radius: vec4<f32>,
     @location(5) border_width: f32,
-    @location(6) shadow_color: vec4<f32>,
-    @location(7) shadow_offset: vec2<f32>,
-    @location(8) shadow_blur_radius: f32,
+    //@location(6) shadow_color: vec4<f32>,
+    //@location(7) shadow_offset: vec2<f32>,
+    //@location(8) shadow_blur_radius: f32,
 }
 
 @vertex
@@ -54,9 +54,9 @@ fn solid_vs_main(input: SolidVertexInput) -> SolidVertexOutput {
     out.size = input.size * globals.scale_factor;
     out.border_radius = border_radius * globals.scale_factor;
     out.border_width = input.border_width * globals.scale_factor;
-    out.shadow_color = input.shadow_color;
-    out.shadow_offset = input.shadow_offset * globals.scale_factor;
-    out.shadow_blur_radius = input.shadow_blur_radius * globals.scale_factor;
+    //out.shadow_color = input.shadow_color;
+    //out.shadow_offset = input.shadow_offset * globals.scale_factor;
+    //out.shadow_blur_radius = input.shadow_blur_radius * globals.scale_factor;
 
     return out;
 }
@@ -107,6 +107,7 @@ fn solid_fs_main(
 
     let quad_color = vec4<f32>(mixed_color.x, mixed_color.y, mixed_color.z, mixed_color.w * radius_alpha);
 
+    /*
     if input.shadow_color.a > 0.0 {
         let shadow_distance = rounded_box_sdf(input.position.xy - input.pos - input.shadow_offset - (input.size / 2.0), input.size / 2.0, border_radius);
         let shadow_alpha = 1.0 - smoothstep(-input.shadow_blur_radius, input.shadow_blur_radius, shadow_distance);
@@ -121,4 +122,7 @@ fn solid_fs_main(
     } else {
         return quad_color;
     }
+    */
+
+    return quad_color;
 }

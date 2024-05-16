@@ -29,6 +29,7 @@ pub(crate) struct TextureInner {
 pub struct RcTexture {
     pub(crate) inner: Rc<RefCell<TextureInner>>,
     size: PhysicalSizeU32,
+    generation: u64,
 }
 
 impl RcTexture {
@@ -46,6 +47,7 @@ impl RcTexture {
                 bind_group: None,
             })),
             size: PhysicalSizeU32::new(dimensions.0, dimensions.1),
+            generation: 0,
         }
     }
 
@@ -56,6 +58,7 @@ impl RcTexture {
                 bind_group: None,
             })),
             size,
+            generation: 0,
         }
     }
 
@@ -76,6 +79,8 @@ impl RcTexture {
         };
 
         *data_to_upload = Some(image);
+
+        self.generation += 1;
 
         Ok(())
     }
@@ -100,7 +105,13 @@ impl RcTexture {
 
         inner.bind_group = None;
 
+        self.generation += 1;
+
         Ok(())
+    }
+
+    pub fn mark_prepass_texture_dirty(&mut self) {
+        self.generation += 1;
     }
 
     pub fn size(&self) -> PhysicalSizeU32 {
@@ -215,13 +226,14 @@ impl Clone for RcTexture {
         Self {
             inner: Rc::clone(&self.inner),
             size: self.size,
+            generation: self.generation,
         }
     }
 }
 
 impl PartialEq for RcTexture {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
+        Rc::ptr_eq(&self.inner, &other.inner) && self.generation == other.generation
     }
 }
 
