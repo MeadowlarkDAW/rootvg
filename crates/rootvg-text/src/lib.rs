@@ -1,5 +1,5 @@
-use once_cell::sync::OnceCell;
-use std::sync::RwLock;
+//use once_cell::sync::OnceCell;
+//use std::sync::RwLock;
 
 pub use glyphon;
 
@@ -16,6 +16,7 @@ pub use buffer::RcTextBuffer;
 pub use primitive::TextPrimitive;
 pub use properties::TextProperties;
 
+/*
 /// Returns the global [`FontSystem`].
 pub fn font_system() -> &'static RwLock<FontSystem> {
     static FONT_SYSTEM: OnceCell<RwLock<FontSystem>> = OnceCell::new();
@@ -45,3 +46,4 @@ impl FontSystem {
         &mut self.raw
     }
 }
+*/

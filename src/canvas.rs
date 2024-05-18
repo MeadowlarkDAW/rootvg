@@ -1,4 +1,5 @@
 use rootvg_core::math::ZIndex;
+use rootvg_text::glyphon::FontSystem;
 use rustc_hash::FxHashMap;
 
 use crate::color::PackedSrgb;
@@ -215,6 +216,7 @@ impl Canvas {
         target: &wgpu::TextureView,
         target_size: PhysicalSizeI32,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
+        #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Result<(), RenderError> {
         assert_eq!(target_size, self.physical_size);
 
@@ -226,6 +228,8 @@ impl Canvas {
             queue,
             #[cfg(feature = "custom-primitive")]
             custom_pipelines,
+            #[cfg(feature = "text")]
+            font_system,
         )?;
 
         let clear_color = clear_color.map(|c| wgpu::Color {
@@ -316,6 +320,7 @@ impl Canvas {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
+        #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Result<(), RenderError> {
         #[cfg(feature = "custom-primitive")]
         let mut custom_needs_preparing = false;
@@ -521,6 +526,7 @@ impl Canvas {
                     &batch_entry.text,
                     device,
                     queue,
+                    font_system,
                 )?;
 
                 self.output.order.push(BatchKind::Text {

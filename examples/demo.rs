@@ -1,4 +1,5 @@
 use rootvg_mesh::MeshPrimitive;
+use rootvg_text::glyphon::FontSystem;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
@@ -37,7 +38,7 @@ fn main() {
     env_logger::init_from_env(env);
 
     let event_loop = EventLoop::new().unwrap();
-    event_loop.run_app(&mut DemoApp { state: None }).unwrap();
+    event_loop.run_app(&mut DemoApp { state: None, font_system: FontSystem::new() }).unwrap();
 }
 
 struct State {
@@ -62,6 +63,7 @@ struct MyPrimitives {
 
 struct DemoApp {
     state: Option<State>,
+    font_system: FontSystem,
 }
 
 impl DemoApp {
@@ -117,7 +119,7 @@ impl DemoApp {
             surface.canvas_config(),
         );
 
-        let primitives = Self::create_primitives();
+        let primitives = Self::create_primitives(&mut self.font_system);
 
         self.state = Some(State {
             window,
@@ -130,7 +132,7 @@ impl DemoApp {
         });
     }
 
-    fn create_primitives() -> MyPrimitives {
+    fn create_primitives(font_system: &mut FontSystem) -> MyPrimitives {
         // --- Quads -------------------------------------------------------------------------
 
         // A solid quad draws a rounded rectangle with a solid background.
@@ -186,6 +188,7 @@ impl DemoApp {
             // The "bounds" denotes the visible area. Any text that lies outside of this
             // bounds is clipped.
             Size::new(100.0, 100.0),
+            font_system,
         );
         let text_primitive = TextPrimitive::new(
             text_buffer,
@@ -414,6 +417,7 @@ impl ApplicationHandler for DemoApp {
                         &mut encoder,
                         &view,
                         state.physical_size,
+                        &mut self.font_system,
                     )
                     .unwrap();
 

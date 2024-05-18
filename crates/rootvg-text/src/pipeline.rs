@@ -1,10 +1,10 @@
 use std::cell::Ref;
 
-use glyphon::{SwashCache, TextArea, TextAtlas, TextRenderer};
+use glyphon::{FontSystem, SwashCache, TextArea, TextAtlas, TextRenderer};
 
 use rootvg_core::math::{PhysicalSizeI32, ScaleFactor};
 
-use crate::{primitive::TextPrimitive, WRITE_LOCK_PANIC_MSG};
+use crate::primitive::TextPrimitive;
 
 pub struct TextBatchBuffer {
     text_renderer: TextRenderer,
@@ -71,6 +71,7 @@ impl TextPipeline {
         primitives: &[TextPrimitive],
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        font_system: &mut FontSystem
     ) -> Result<(), glyphon::PrepareError> {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.
@@ -84,8 +85,6 @@ impl TextPipeline {
         }
 
         self.atlas_needs_trimmed = true;
-
-        let mut font_system = crate::font_system().write().expect(WRITE_LOCK_PANIC_MSG);
 
         // TODO: Reuse the allocation of these Vecs?
         let borrowed_buffers: Vec<Ref<'_, glyphon::Buffer>> =
@@ -112,7 +111,7 @@ impl TextPipeline {
         batch.text_renderer.prepare(
             device,
             queue,
-            font_system.raw_mut(),
+            font_system,
             &mut self.atlas,
             glyphon::Resolution {
                 width: self.screen_size.width as u32,

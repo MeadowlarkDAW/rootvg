@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use rootvg_text::glyphon::FontSystem;
 use wgpu::PipelineCompilationOptions;
 use winit::{
     application::ApplicationHandler,
@@ -51,7 +52,7 @@ fn main() {
 
     let event_loop = EventLoop::new().unwrap();
     event_loop
-        .run_app(&mut PrepassTextureApp { state: None })
+        .run_app(&mut PrepassTextureApp { state: None, font_system: FontSystem::new() })
         .unwrap();
 }
 
@@ -70,6 +71,7 @@ struct State {
 
 struct PrepassTextureApp {
     state: Option<State>,
+    font_system: FontSystem,
 }
 
 impl PrepassTextureApp {
@@ -320,6 +322,7 @@ impl ApplicationHandler for PrepassTextureApp {
                         &mut encoder,
                         &view,
                         state.physical_size,
+                        &mut self.font_system,
                     )
                     .unwrap();
 

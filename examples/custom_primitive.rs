@@ -304,6 +304,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 // ---------------------------------------------------------------------------------------
 
 use std::sync::Arc;
+use rootvg_text::glyphon::FontSystem;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -326,7 +327,7 @@ fn main() {
 
     let event_loop = EventLoop::new().unwrap();
     event_loop
-        .run_app(&mut CustomPrimitiveApp { state: None })
+        .run_app(&mut CustomPrimitiveApp { state: None, font_system: FontSystem::new() })
         .unwrap();
 }
 
@@ -344,6 +345,7 @@ struct State {
 
 struct CustomPrimitiveApp {
     state: Option<State>,
+    font_system: FontSystem,
 }
 
 impl CustomPrimitiveApp {
@@ -495,6 +497,7 @@ impl ApplicationHandler for CustomPrimitiveApp {
                         &view,
                         state.physical_size,
                         &mut [&mut state.my_custom_pipeline],
+                        &mut self.font_system,
                     )
                     .unwrap();
 
