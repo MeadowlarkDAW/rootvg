@@ -71,7 +71,7 @@ impl TextPipeline {
         primitives: &[TextPrimitive],
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        font_system: &mut FontSystem
+        font_system: &mut FontSystem,
     ) -> Result<(), glyphon::PrepareError> {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.

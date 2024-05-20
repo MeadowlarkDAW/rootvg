@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use rootvg_text::glyphon::FontSystem;
+use std::sync::Arc;
 use wgpu::PipelineCompilationOptions;
 use winit::{
     application::ApplicationHandler,
@@ -52,7 +52,10 @@ fn main() {
 
     let event_loop = EventLoop::new().unwrap();
     event_loop
-        .run_app(&mut PrepassTextureApp { state: None, font_system: FontSystem::new() })
+        .run_app(&mut PrepassTextureApp {
+            state: None,
+            font_system: FontSystem::new(),
+        })
         .unwrap();
 }
 

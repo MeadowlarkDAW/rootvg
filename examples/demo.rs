@@ -38,7 +38,12 @@ fn main() {
     env_logger::init_from_env(env);
 
     let event_loop = EventLoop::new().unwrap();
-    event_loop.run_app(&mut DemoApp { state: None, font_system: FontSystem::new() }).unwrap();
+    event_loop
+        .run_app(&mut DemoApp {
+            state: None,
+            font_system: FontSystem::new(),
+        })
+        .unwrap();
 }
 
 struct State {

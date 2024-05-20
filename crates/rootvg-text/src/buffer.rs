@@ -23,7 +23,12 @@ pub struct RcTextBuffer {
 }
 
 impl RcTextBuffer {
-    pub fn new(text: &str, props: TextProperties, bounds_size: Size, font_system: &mut FontSystem) -> Self {
+    pub fn new(
+        text: &str,
+        props: TextProperties,
+        bounds_size: Size,
+        font_system: &mut FontSystem,
+    ) -> Self {
         let mut raw_buffer = glyphon::Buffer::new(font_system, props.metrics);
 
         raw_buffer.set_size(font_system, bounds_size.width, bounds_size.height);
@@ -69,13 +74,16 @@ impl RcTextBuffer {
         Size::new(width, total_lines as f32 * buffer.metrics().line_height)
     }
 
-    pub fn set_text_and_props(&mut self, text: &str, props: TextProperties, font_system: &mut FontSystem) {
+    pub fn set_text_and_props(
+        &mut self,
+        text: &str,
+        props: TextProperties,
+        font_system: &mut FontSystem,
+    ) {
         let mut inner = RefCell::borrow_mut(&self.inner);
 
         if inner.props.metrics != props.metrics {
-            inner
-                .raw_buffer
-                .set_metrics(font_system, props.metrics)
+            inner.raw_buffer.set_metrics(font_system, props.metrics)
         }
 
         if inner.props.wrap != props.wrap {

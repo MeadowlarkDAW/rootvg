@@ -303,8 +303,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 // ---------------------------------------------------------------------------------------
 
-use std::sync::Arc;
 use rootvg_text::glyphon::FontSystem;
+use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -327,7 +327,10 @@ fn main() {
 
     let event_loop = EventLoop::new().unwrap();
     event_loop
-        .run_app(&mut CustomPrimitiveApp { state: None, font_system: FontSystem::new() })
+        .run_app(&mut CustomPrimitiveApp {
+            state: None,
+            font_system: FontSystem::new(),
+        })
         .unwrap();
 }
 
