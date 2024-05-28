@@ -1,6 +1,8 @@
 use std::cell::Ref;
 
-use glyphon::{FontSystem, SwashCache, TextArea, TextAtlas, TextRenderer};
+use glyphon::{
+    Cache, FontSystem, Resolution, SwashCache, TextArea, TextAtlas, TextRenderer, Viewport,
+};
 
 use rootvg_core::math::{PhysicalSizeI32, ScaleFactor};
 
@@ -12,8 +14,10 @@ pub struct TextBatchBuffer {
 }
 
 pub struct TextPipeline {
-    cache: SwashCache,
+    swash_cache: SwashCache,
+    //cache: Cache,
     atlas: TextAtlas,
+    viewport: Viewport,
     multisample: wgpu::MultisampleState,
     screen_size: PhysicalSizeI32,
     scale_factor: ScaleFactor,
@@ -28,12 +32,17 @@ impl TextPipeline {
         format: wgpu::TextureFormat,
         multisample: wgpu::MultisampleState,
     ) -> Self {
-        let cache = SwashCache::new();
-        let atlas = TextAtlas::with_color_mode(device, queue, format, glyphon::ColorMode::Accurate);
+        let swash_cache = SwashCache::new();
+        let cache = Cache::new(device);
+        let viewport = Viewport::new(device, &cache);
+        let atlas =
+            TextAtlas::with_color_mode(device, queue, &cache, format, glyphon::ColorMode::Accurate);
 
         Self {
-            cache,
+            swash_cache,
+            //cache,
             atlas,
+            viewport,
             multisample,
             screen_size: PhysicalSizeI32::default(),
             scale_factor: ScaleFactor::default(),
@@ -52,7 +61,7 @@ impl TextPipeline {
     pub fn start_preparations(
         &mut self,
         _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
+        queue: &wgpu::Queue,
         screen_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
     ) {
@@ -63,6 +72,14 @@ impl TextPipeline {
         self.screen_size = screen_size;
         self.scale_factor = scale_factor;
         self.prepare_all_batches = true;
+
+        self.viewport.update(
+            queue,
+            Resolution {
+                width: screen_size.width as u32,
+                height: screen_size.height as u32,
+            },
+        );
     }
 
     pub fn prepare_batch(
@@ -113,12 +130,9 @@ impl TextPipeline {
             queue,
             font_system,
             &mut self.atlas,
-            glyphon::Resolution {
-                width: self.screen_size.width as u32,
-                height: self.screen_size.height as u32,
-            },
+            &self.viewport,
             text_areas,
-            &mut self.cache,
+            &mut self.swash_cache,
         )
     }
 
@@ -138,6 +152,8 @@ impl TextPipeline {
         batch: &'pass TextBatchBuffer,
         render_pass: &mut wgpu::RenderPass<'pass>,
     ) -> Result<(), glyphon::RenderError> {
-        batch.text_renderer.render(&self.atlas, render_pass)
+        batch
+            .text_renderer
+            .render(&self.atlas, &self.viewport, render_pass)
     }
 }

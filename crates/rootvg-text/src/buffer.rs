@@ -1,15 +1,69 @@
-use glyphon::cosmic_text::Align;
-use glyphon::FontSystem;
+use glyphon::cosmic_text::{Align, BufferRef};
+use glyphon::{Edit, FontSystem};
 use std::cell::{Ref, RefCell};
+use std::fmt::Debug;
+use std::hint::unreachable_unchecked;
 use std::rc::Rc;
 
 use rootvg_core::math::Size;
 
 use super::TextProperties;
 
+pub enum BufferType {
+    Normal(glyphon::Buffer),
+    Editor(glyphon::Editor<'static>),
+}
+
+impl BufferType {
+    pub fn editor(&self) -> Option<&glyphon::Editor<'static>> {
+        if let BufferType::Editor(editor) = self {
+            Some(editor)
+        } else {
+            None
+        }
+    }
+}
+
+impl Debug for BufferType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BufferType::Normal(_) => write!(f, "BufferType::Normal"),
+            BufferType::Editor(_) => write!(f, "BufferType::Editor"),
+        }
+    }
+}
+
+impl BufferType {
+    pub fn raw(&self) -> &glyphon::Buffer {
+        match self {
+            BufferType::Normal(b) => b,
+            BufferType::Editor(editor) => {
+                if let BufferRef::Owned(b) = editor.buffer_ref() {
+                    b
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+    }
+
+    pub fn raw_mut(&mut self) -> &mut glyphon::Buffer {
+        match self {
+            BufferType::Normal(b) => b,
+            BufferType::Editor(editor) => {
+                if let BufferRef::Owned(b) = editor.buffer_ref_mut() {
+                    b
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 struct TextBufferInner {
-    raw_buffer: glyphon::Buffer,
+    raw_buffer: BufferType,
     props: TextProperties,
     bounds_size: Size,
     has_text: bool,
@@ -27,6 +81,7 @@ impl RcTextBuffer {
         text: &str,
         props: TextProperties,
         bounds_size: Size,
+        is_editor: bool,
         font_system: &mut FontSystem,
     ) -> Self {
         let mut raw_buffer = glyphon::Buffer::new(font_system, props.metrics);
@@ -39,6 +94,12 @@ impl RcTextBuffer {
         if has_text {
             shape(&mut raw_buffer, font_system, props.align);
         }
+
+        let raw_buffer = if is_editor {
+            BufferType::Editor(glyphon::Editor::new(raw_buffer))
+        } else {
+            BufferType::Normal(raw_buffer)
+        };
 
         Self {
             inner: Rc::new(RefCell::new(TextBufferInner {
@@ -63,7 +124,7 @@ impl RcTextBuffer {
     /// The minimum size (in logical points) needed to fit the text contents.
     pub fn measure(&self) -> Size {
         let inner = RefCell::borrow(&self.inner);
-        let buffer = &inner.raw_buffer;
+        let buffer = inner.raw_buffer.raw();
 
         let (width, total_lines) = buffer
             .layout_runs()
@@ -77,30 +138,36 @@ impl RcTextBuffer {
     pub fn set_text_and_props(
         &mut self,
         text: &str,
-        props: TextProperties,
+        new_props: TextProperties,
         font_system: &mut FontSystem,
     ) {
         let mut inner = RefCell::borrow_mut(&self.inner);
+        let TextBufferInner {
+            raw_buffer,
+            props,
+            has_text,
+            ..
+        } = &mut *inner;
 
-        if inner.props.metrics != props.metrics {
-            inner.raw_buffer.set_metrics(font_system, props.metrics)
+        let raw_buffer = raw_buffer.raw_mut();
+
+        if props.metrics != props.metrics {
+            raw_buffer.set_metrics(font_system, props.metrics)
         }
 
-        if inner.props.wrap != props.wrap {
-            inner.raw_buffer.set_wrap(font_system, props.wrap);
+        if props.wrap != props.wrap {
+            raw_buffer.set_wrap(font_system, props.wrap);
         }
 
-        inner
-            .raw_buffer
-            .set_text(font_system, text, props.attrs, props.shaping);
+        raw_buffer.set_text(font_system, text, props.attrs, props.shaping);
 
-        inner.has_text = !text.is_empty();
+        *has_text = !text.is_empty();
 
-        if inner.has_text {
-            shape(&mut inner.raw_buffer, font_system, props.align);
+        if *has_text {
+            shape(raw_buffer, font_system, props.align);
         }
 
-        inner.props = props;
+        *props = new_props;
 
         self.generation += 1;
     }
@@ -113,6 +180,8 @@ impl RcTextBuffer {
             bounds_size: _,
             has_text,
         } = &mut *inner;
+
+        let raw_buffer = raw_buffer.raw_mut();
 
         raw_buffer.set_text(font_system, text, props.attrs, props.shaping);
 
@@ -140,6 +209,8 @@ impl RcTextBuffer {
         }
         *inner_bounds_size = bounds_size;
 
+        let raw_buffer = raw_buffer.raw_mut();
+
         raw_buffer.set_size(
             font_system,
             bounds_size.width as f32,
@@ -153,10 +224,83 @@ impl RcTextBuffer {
         self.generation += 1;
     }
 
-    pub(crate) fn raw_buffer<'a>(&'a self) -> Ref<'a, glyphon::Buffer> {
+    pub fn buffer<'a>(&'a self) -> Ref<'a, BufferType> {
         let inner = RefCell::borrow(&self.inner);
         Ref::map(inner, |inner| &inner.raw_buffer)
     }
+
+    /// Borrow the editor mutably. If this buffer does not have an editor then
+    /// this will do nothing.
+    ///
+    /// Note, don't mutate the buffer bounds or the text properties using this
+    /// method or else the state will get out of sync. Also don't shape the
+    /// text as this method will automatically do that for you.
+    ///
+    /// You may mutate the text inside of the buffer, just be sure to mark
+    /// that the text contents have changed in the returned `EditorBorrowStatus`.
+    pub fn with_editor_mut<
+        F: FnOnce(&mut glyphon::Editor, &mut FontSystem) -> EditorBorrowStatus,
+    >(
+        &mut self,
+        f: F,
+        font_system: &mut FontSystem,
+    ) {
+        let mut inner = RefCell::borrow_mut(&self.inner);
+        let TextBufferInner {
+            raw_buffer,
+            props,
+            bounds_size: _,
+            has_text,
+        } = &mut *inner;
+
+        if let BufferType::Editor(editor) = raw_buffer {
+            let status = (f)(editor, font_system);
+
+            if status.text_changed {
+                *has_text = status.has_text;
+
+                if *has_text {
+                    let b = match editor.buffer_ref_mut() {
+                        BufferRef::Owned(b) => b,
+                        _ => unreachable!(),
+                    };
+
+                    shape(b, font_system, props.align);
+                }
+
+                self.generation += 1;
+            }
+        }
+    }
+
+    pub fn raw_buffer<'a>(&'a self) -> Ref<'a, glyphon::Buffer> {
+        let inner = RefCell::borrow(&self.inner);
+        Ref::map(inner, |inner| {
+            match &inner.raw_buffer {
+                BufferType::Normal(b) => b,
+                BufferType::Editor(editor) => {
+                    if let BufferRef::Owned(b) = editor.buffer_ref() {
+                        b
+                    } else {
+                        // SAFETY: Because of the constructor, `TextBufferInner`
+                        // can only have an editor with an owned buffer.
+                        unsafe { unreachable_unchecked() }
+                    }
+                }
+            }
+        })
+    }
+
+    pub fn sync_state_from_editor(&mut self) {
+        // TODO
+        self.generation += 1;
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EditorBorrowStatus {
+    pub text_changed: bool,
+    pub has_text: bool,
 }
 
 impl Clone for RcTextBuffer {

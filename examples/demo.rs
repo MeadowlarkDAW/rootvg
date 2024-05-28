@@ -193,6 +193,7 @@ impl DemoApp {
             // The "bounds" denotes the visible area. Any text that lies outside of this
             // bounds is clipped.
             Size::new(100.0, 100.0),
+            false,
             font_system,
         );
         let text_primitive = TextPrimitive::new(
