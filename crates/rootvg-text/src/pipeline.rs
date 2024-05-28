@@ -112,8 +112,8 @@ impl TextPipeline {
             .zip(borrowed_buffers.iter())
             .map(|(p, b)| TextArea {
                 buffer: &*b,
-                left: p.pos.x * self.scale_factor,
-                top: p.pos.y * self.scale_factor,
+                left: (p.pos.x * self.scale_factor).round(),
+                top: (p.pos.y * self.scale_factor).round() + 0.5,
                 scale: self.scale_factor.0,
                 bounds: glyphon::TextBounds {
                     left: (p.pos.x * self.scale_factor).floor() as i32,
