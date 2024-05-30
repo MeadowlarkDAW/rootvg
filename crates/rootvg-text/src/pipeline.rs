@@ -116,10 +116,15 @@ impl TextPipeline {
                 top: (p.pos.y * self.scale_factor).round() + 0.5,
                 scale: self.scale_factor.0,
                 bounds: glyphon::TextBounds {
-                    left: (p.pos.x * self.scale_factor).floor() as i32,
-                    top: (p.pos.y * self.scale_factor).floor() as i32,
-                    right: ((p.pos.x + p.bounds_size.width) * self.scale_factor).ceil() as i32,
-                    bottom: ((p.pos.y + p.bounds_size.height) * self.scale_factor).ceil() as i32,
+                    left: ((p.pos.x + p.clipping_bounds.min_x()) * self.scale_factor).round()
+                        as i32,
+                    top: ((p.pos.y + p.clipping_bounds.min_y()) * self.scale_factor).round() as i32,
+                    right: ((p.pos.x + p.clipping_bounds.min_x() + p.clipping_bounds.width())
+                        * self.scale_factor)
+                        .round() as i32,
+                    bottom: ((p.pos.y + p.clipping_bounds.min_y() + p.clipping_bounds.height())
+                        * self.scale_factor)
+                        .round() as i32,
                 },
                 default_color: glyphon::Color::rgba(p.color.r, p.color.g, p.color.b, p.color.a),
             })

@@ -201,6 +201,7 @@ impl DemoApp {
             Point::new(310.0, 100.0),
             // The `glyhpon` crate doesn't use our `PackedSrgb` format.
             RGBA8::new(200, 200, 200, 255),
+            None,
         );
 
         // --- Image -------------------------------------------------------------------------

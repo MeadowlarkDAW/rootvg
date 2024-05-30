@@ -1,5 +1,5 @@
 use rootvg_core::color::RGBA8;
-use rootvg_core::math::{Point, Size};
+use rootvg_core::math::{Point, Rect};
 
 use super::RcTextBuffer;
 
@@ -8,18 +8,31 @@ pub struct TextPrimitive {
     pub buffer: RcTextBuffer,
     pub pos: Point,
     pub color: RGBA8,
-    pub bounds_size: Size,
+    pub clipping_bounds: Rect,
 }
 
 impl TextPrimitive {
-    pub fn new(buffer: RcTextBuffer, pos: Point, color: RGBA8) -> Self {
-        let bounds_size = buffer.bounds_size();
-
+    /// Create a new [`TextPrimitive`]
+    ///
+    /// * `buffer` - The text buffer
+    /// * `pos` - The position of the primitive
+    /// * `color` - The color of the text
+    /// * `clipping_bounds` - A clipping rectangle to apply to the text (relative to the text buffer).
+    /// If this is set to `None`, then a default clipping rectangle covering the whole text buffer
+    /// will be used.
+    pub fn new(
+        buffer: RcTextBuffer,
+        pos: Point,
+        color: RGBA8,
+        clipping_bounds: Option<Rect>,
+    ) -> Self {
+        let clipping_bounds =
+            clipping_bounds.unwrap_or_else(|| Rect::from_size(buffer.bounds_size()));
         Self {
             buffer,
             pos,
             color,
-            bounds_size,
+            clipping_bounds,
         }
     }
 }
