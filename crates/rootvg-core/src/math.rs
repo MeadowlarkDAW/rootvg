@@ -18,10 +18,20 @@ pub type Point = euclid::default::Point2D<f32>;
 /// Alias for ```euclid::default::Point2D<i32>```.
 pub type PointI32 = euclid::default::Point2D<i32>;
 
+/// A point in units of logical points.
+///
+/// Alias for ```euclid::default::Point2D<f64>```.
+pub type PointF64 = euclid::default::Point2D<f64>;
+
 /// A vector in units of logical points.
 ///
 /// Alias for ```euclid::default::Vector2D<f32>```.
 pub type Vector = euclid::default::Vector2D<f32>;
+
+/// A vector in units of logical points.
+///
+/// Alias for ```euclid::default::Vector2D<f64>```.
+pub type VectorF64 = euclid::default::Vector2D<f64>;
 
 /// A size in units of logical points.
 ///
@@ -33,20 +43,40 @@ pub type Size = euclid::default::Size2D<f32>;
 /// Alias for ```euclid::default::Size2D<i32>```.
 pub type SizeI32 = euclid::default::Size2D<i32>;
 
+/// A size in units of logical points.
+///
+/// Alias for ```euclid::default::Size2D<f64>```.
+pub type SizeF64 = euclid::default::Size2D<f64>;
+
 /// Alias for ```euclid::default::Box2D<f32>```
 pub type Box2D = euclid::default::Box2D<f32>;
+
+/// Alias for ```euclid::default::Box2D<f64>```
+pub type Box2DF64 = euclid::default::Box2D<f64>;
 
 /// Alias for ```euclid::default::Transform2D<f32>```
 pub type Transform = euclid::default::Transform2D<f32>;
 
+/// Alias for ```euclid::default::Transform2D<f64>```
+pub type TransformF64 = euclid::default::Transform2D<f64>;
+
 /// Alias for ```euclid::default::Rotation2D<f32>```
 pub type Rotation = euclid::default::Rotation2D<f32>;
+
+/// Alias for ```euclid::default::Rotation2D<f64>```
+pub type RotationF64 = euclid::default::Rotation2D<f64>;
 
 /// Alias for ```euclid::default::Translation2D<f32>```
 pub type Translation = euclid::Translation2D<f32, euclid::UnknownUnit, euclid::UnknownUnit>;
 
+/// Alias for ```euclid::default::Translation2D<f64>```
+pub type TranslationF64 = euclid::Translation2D<f64, euclid::UnknownUnit, euclid::UnknownUnit>;
+
 /// Alias for ```euclid::default::Scale<f32>```
 pub type Scale = euclid::default::Scale<f32>;
+
+/// Alias for ```euclid::default::Scale<f64>```
+pub type ScaleF64 = euclid::default::Scale<f64>;
 
 /// A rectangle in units of logical points.
 ///
@@ -58,16 +88,32 @@ pub type Rect = euclid::default::Rect<f32>;
 /// Alias for ```euclid::default::Rect<i32>```
 pub type RectI32 = euclid::default::Rect<i32>;
 
+/// A rectangle in units of logical points.
+///
+/// Alias for ```euclid::default::Rect<f64>```
+pub type RectF64 = euclid::default::Rect<f64>;
+
 /// An angle in radians (f32).
 ///
 /// Alias for ```euclid::Angle<f32>```
 pub type Angle = euclid::Angle<f32>;
+
+/// An angle in radians (f64).
+///
+/// Alias for ```euclid::Angle<f64>```
+pub type AngleF64 = euclid::Angle<f64>;
 
 /// A group of 2D side offsets, which correspond to top/right/bottom/left for borders,
 /// padding,and margins in CSS, optionally tagged with a unit.
 ///
 /// Alias for ```euclid::SideOffsets2D<f32, UnknownUnit>```
 pub type SideOffsets = euclid::SideOffsets2D<f32, UnknownUnit>;
+
+/// A group of 2D side offsets, which correspond to top/right/bottom/left for borders,
+/// padding,and margins in CSS, optionally tagged with a unit.
+///
+/// Alias for ```euclid::SideOffsets2D<f64, UnknownUnit>```
+pub type SideOffsetsF64 = euclid::SideOffsets2D<f64, UnknownUnit>;
 
 /*
 /// A point in units of logical points.
