@@ -306,26 +306,38 @@ pub fn to_logical_rect_from_recip_i32(rect: PhysicalRectI32, scale_factor_recip:
 
 /// Shorthand for `Vector::new(x, y)`.
 #[inline]
-pub fn vector(x: f32, y: f32) -> Vector {
+pub const fn vector(x: f32, y: f32) -> Vector {
     Vector::new(x, y)
 }
 
 /// Shorthand for `Point::new(x, y)`.
 #[inline]
-pub fn point(x: f32, y: f32) -> Point {
+pub const fn point(x: f32, y: f32) -> Point {
     Point::new(x, y)
 }
 
 /// Shorthand for `Size::new(x, y)`.
 #[inline]
-pub fn size(w: f32, h: f32) -> Size {
+pub const fn size(w: f32, h: f32) -> Size {
     Size::new(w, h)
 }
 
 /// Shorthand for `Angle { radians: value }`.
 #[inline]
-pub fn radians(radians: f32) -> Angle {
+pub const fn radians(radians: f32) -> Angle {
     Angle { radians }
+}
+
+/// Shorthand for `Angle { radians: value * PI / 180.0 }`.
+#[inline]
+pub fn degrees(degrees: f32) -> Angle {
+    Angle { radians: degrees * (std::f32::consts::PI / 180.0) }
+}
+
+/// Shorthand for `Rect::new(Point::new(x, y), Size::new(width, height))`.
+#[inline]
+pub const fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
+    Rect::new(Point::new(x, y), Size::new(width, height))
 }
 
 /// A scaling factor in points per pixel.
