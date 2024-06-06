@@ -31,4 +31,4 @@ Primitives types that aren't needed can be disabled in the feature flags.
 
 ## Motivation
 
-This library was created for the upcoming GUI library that will power the [Meadowlark](https://github.com/MeadowlarkDAW/Meadowlark) DAW.
+This library was created for the [Yarrow](https://github.com/MeadowlarkDAW/Yarrow) GUI library which powers the [Meadowlark](https://github.com/MeadowlarkDAW/Meadowlark) DAW.

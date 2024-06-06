@@ -9,7 +9,7 @@ mod builder;
 pub use arc::{ArcPath, EllipticalArcPath};
 pub use builder::PathBuilder;
 
-pub use lyon::path as lyon_path;
+//pub use lyon::path as lyon_path;
 
 use rootvg_core::math::{Point, Size};
 

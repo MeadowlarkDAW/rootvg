@@ -3,6 +3,7 @@
 // Iced license (MIT): https://github.com/iced-rs/iced/blob/31d1d5fecbef50fa319cabd5d4194f1e4aaefa21/LICENSE
 
 use rootvg_core::math::PhysicalSizeI32;
+use wgpu::PipelineCompilationOptions;
 
 #[derive(Debug)]
 pub struct MsaaPipeline {
@@ -71,6 +72,7 @@ impl MsaaPipeline {
                 module: &shader,
                 entry_point: "vs_main",
                 buffers: &[],
+                compilation_options: PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -80,6 +82,7 @@ impl MsaaPipeline {
                     blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,

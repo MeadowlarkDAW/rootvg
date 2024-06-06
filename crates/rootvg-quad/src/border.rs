@@ -27,6 +27,17 @@ pub struct Radius {
     pub bottom_left: f32,
 }
 
+impl Radius {
+    pub const fn zero() -> Self {
+        Self {
+            top_left: 0.0,
+            top_right: 0.0,
+            bottom_right: 0.0,
+            bottom_left: 0.0,
+        }
+    }
+}
+
 impl From<f32> for Radius {
     fn from(w: f32) -> Self {
         Self {

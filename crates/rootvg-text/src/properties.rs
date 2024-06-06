@@ -1,4 +1,4 @@
-use glyphon::cosmic_text::Align;
+use glyphon::cosmic_text::{Align, CacheKeyFlags};
 use glyphon::{Attrs, Family, Metrics, Shaping, Stretch, Style, Weight, Wrap};
 
 /// The style of a font
@@ -54,6 +54,7 @@ impl Default for TextProperties {
                 style: Style::Normal,
                 weight: Weight::NORMAL,
                 metadata: 0,
+                cache_key_flags: CacheKeyFlags::empty(),
             },
             wrap: Wrap::None,
             shaping: Shaping::Basic,

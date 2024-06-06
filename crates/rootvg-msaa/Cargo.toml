@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-msaa"
-version = "0.1.0"
+version = "0.2.0"
 description = "MSAA antialiasing for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -13,7 +13,7 @@ keywords.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rootvg-core = { version = "0.1", path = "../rootvg-core", default-features = false }
+rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true

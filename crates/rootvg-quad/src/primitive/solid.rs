@@ -4,7 +4,6 @@ use rootvg_core::color::PackedSrgb;
 use rootvg_core::math::{Point, Rect, Size};
 
 use crate::border::Border;
-use crate::shadow::Shadow;
 use crate::Radius;
 
 /// A quad primitive with a solid background.
@@ -16,8 +15,10 @@ pub struct SolidQuad {
     pub bg_color: PackedSrgb,
     /// The [`Border`] of the quad
     pub border: Border,
+    /*
     /// The shadow of the quad
     pub shadow: Shadow,
+    */
 }
 
 impl SolidQuad {
@@ -29,9 +30,9 @@ impl SolidQuad {
             border_color: self.border.color,
             border_radius: self.border.radius.into(),
             border_width: self.border.width,
-            shadow_color: self.shadow.color,
-            shadow_offset: self.shadow.offset.into(),
-            shadow_blur_radius: self.shadow.blur_radius,
+            //shadow_color: self.shadow.color,
+            //shadow_offset: self.shadow.offset.into(),
+            //shadow_blur_radius: self.shadow.blur_radius,
         }
     }
 
@@ -87,6 +88,7 @@ impl SolidQuadBuilder {
         self
     }
 
+    /*
     pub fn shadow_color(mut self, color: impl Into<PackedSrgb>) -> Self {
         self.quad.shadow.color = color.into();
         self
@@ -106,6 +108,7 @@ impl SolidQuadBuilder {
         self.quad.shadow = shadow;
         self
     }
+    */
 
     pub fn build(self) -> SolidQuad {
         self.quad
@@ -134,7 +137,7 @@ pub struct SolidQuadPrimitive {
 
     /// The border width of the [`Quad`] in logical points.
     pub border_width: f32,
-
+    /*
     /// The shadow color of the [`Quad`].
     pub shadow_color: PackedSrgb,
 
@@ -143,6 +146,7 @@ pub struct SolidQuadPrimitive {
 
     /// The shadow blur radius of the [`Quad`] in logical points.
     pub shadow_blur_radius: f32,
+    */
 }
 
 impl SolidQuadPrimitive {
@@ -154,9 +158,9 @@ impl SolidQuadPrimitive {
             border_color: quad.border.color,
             border_radius: quad.border.radius.into(),
             border_width: quad.border.width,
-            shadow_color: quad.shadow.color,
-            shadow_offset: quad.shadow.offset.into(),
-            shadow_blur_radius: quad.shadow.blur_radius,
+            //shadow_color: quad.shadow.color,
+            //shadow_offset: quad.shadow.offset.into(),
+            //shadow_blur_radius: quad.shadow.blur_radius,
         }
     }
 }

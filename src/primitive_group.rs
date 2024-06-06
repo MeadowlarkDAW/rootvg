@@ -1,3 +1,4 @@
+use rootvg_core::math::ZIndex;
 use smallvec::{smallvec, SmallVec};
 
 use crate::{math::RectI32, Primitive};
@@ -25,11 +26,11 @@ const STATIC_ALLOC_PRIMITIVES: usize = 4;
 
 /// A group of primitives that can be added to a canvas. This is usally
 /// the output of a single widget.
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimitiveGroup {
     pub(crate) primitive_batches: SmallVec<[PrimitiveBatchSlice; STATIC_ALLOC_PRIMITIVES]>,
     current_scissor_rect: Option<RectI32>,
-    current_z_index: u16,
+    current_z_index: ZIndex,
     create_new_batch: bool,
 }
 
@@ -47,6 +48,7 @@ impl PrimitiveGroup {
         self.primitive_batches.clear();
         self.current_scissor_rect = None;
         self.create_new_batch = true;
+        self.current_z_index = 0;
     }
 
     pub fn set_scissor_rect(&mut self, scissor_rect: RectI32) {
@@ -63,14 +65,14 @@ impl PrimitiveGroup {
         &self.current_scissor_rect
     }
 
-    pub fn set_z_index(&mut self, z_index: u16) {
+    pub fn set_z_index(&mut self, z_index: ZIndex) {
         if self.current_z_index != z_index {
             self.create_new_batch = true;
         }
         self.current_z_index = z_index;
     }
 
-    pub fn z_index(&self) -> u16 {
+    pub fn z_index(&self) -> ZIndex {
         self.current_z_index
     }
 
@@ -475,14 +477,14 @@ impl PrimitiveGroup {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PrimitiveBatchSlice {
     pub(crate) kind: PrimitiveBatchKind,
-    pub(crate) z_index: u16,
+    pub(crate) z_index: ZIndex,
     pub(crate) scissor_rect: Option<RectI32>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum PrimitiveBatchKind {
     #[cfg(feature = "quad")]
     SolidQuad(SmallVec<[SolidQuadPrimitive; STATIC_ALLOC_PRIMITIVES]>),

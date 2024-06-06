@@ -1,3 +1,5 @@
+use rootvg_core::math::ZIndex;
+use rootvg_text::glyphon::FontSystem;
 use rustc_hash::FxHashMap;
 
 use crate::color::PackedSrgb;
@@ -90,7 +92,7 @@ pub struct Canvas {
 
     needs_preparing: bool,
 
-    pub(crate) z_index: u16,
+    pub(crate) z_index: ZIndex,
 
     #[cfg(feature = "custom-primitive")]
     num_custom_pipelines: usize,
@@ -214,6 +216,7 @@ impl Canvas {
         target: &wgpu::TextureView,
         target_size: PhysicalSizeI32,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
+        #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Result<(), RenderError> {
         assert_eq!(target_size, self.physical_size);
 
@@ -225,6 +228,8 @@ impl Canvas {
             queue,
             #[cfg(feature = "custom-primitive")]
             custom_pipelines,
+            #[cfg(feature = "text")]
+            font_system,
         )?;
 
         let clear_color = clear_color.map(|c| wgpu::Color {
@@ -315,6 +320,7 @@ impl Canvas {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
+        #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Result<(), RenderError> {
         #[cfg(feature = "custom-primitive")]
         let mut custom_needs_preparing = false;
@@ -416,7 +422,7 @@ impl Canvas {
 
                 self.output
                     .order
-                    .push(BatchKind::ClipRect(key.scissor_rect));
+                    .push(BatchKind::ScissorRect(key.scissor_rect));
             };
 
             #[cfg(feature = "quad")]
@@ -520,6 +526,7 @@ impl Canvas {
                     &batch_entry.text,
                     device,
                     queue,
+                    font_system,
                 )?;
 
                 self.output.order.push(BatchKind::Text {
@@ -744,7 +751,7 @@ impl Canvas {
                         return Err(RenderError::CustomPipelineRenderError(e));
                     }
                 }
-                BatchKind::ClipRect(scissor_rect) => {
+                BatchKind::ScissorRect(scissor_rect) => {
                     let mut x = (scissor_rect.origin.x as f32 * self.scale_factor).round() as i32;
                     let mut y = (scissor_rect.origin.y as f32 * self.scale_factor).round() as i32;
                     let mut width =
@@ -757,13 +764,13 @@ impl Canvas {
                         || y + scissor_rect.size.height <= 0
                         || y >= self.physical_size.height
                     {
-                        // Clip rect is off screen
+                        // Scissor rect is off screen
                         scissor_rect_in_bounds = false;
                         continue;
                     }
                     scissor_rect_in_bounds = true;
 
-                    // Clip rect must be in bounds or wgpu will panic.
+                    // Scissor rect must be in bounds or wgpu will panic.
                     if x < 0 {
                         width += x;
                         x = 0;
@@ -795,7 +802,7 @@ pub(crate) struct BatchKey {
 }
 
 impl BatchKey {
-    fn new(scissor_rect: RectI32, main_z_index: u16, inner_z_index: u16) -> Self {
+    fn new(scissor_rect: RectI32, main_z_index: ZIndex, inner_z_index: ZIndex) -> Self {
         Self {
             scissor_rect,
             z_index: (main_z_index as u32) << 16 | inner_z_index as u32,
@@ -934,7 +941,7 @@ enum BatchKind {
         batch_index: usize,
     },
 
-    ClipRect(RectI32),
+    ScissorRect(RectI32),
 }
 
 #[cfg(feature = "custom-primitive")]
@@ -952,7 +959,7 @@ fn offset_scissor_rect(scissor_rect: RectI32, offset: PointI32, size: SizeI32) -
         || y + scissor_rect.size.height <= 0
         || y >= size.height
     {
-        // Clip rect is off screen
+        // Scissor rect is off screen
         return None;
     }
 

@@ -3,6 +3,7 @@ use rootvg_core::{
     math::{PhysicalSizeI32, ScaleFactor},
     pipeline::DefaultConstantUniforms,
 };
+use wgpu::PipelineCompilationOptions;
 
 use super::INITIAL_INSTANCES;
 
@@ -70,19 +71,23 @@ impl SolidQuadPipeline {
                         4 => Float32x4,
                         // Border width
                         5 => Float32,
+                        /*
                         // Shadow color
                         6 => Float32x4,
                         // Shadow offset
                         7 => Float32x2,
                         // Shadow blur radius
                         8 => Float32,
+                        */
                     ),
                 }],
+                compilation_options: PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "solid_fs_main",
                 targets: &super::color_target_state(format),
+                compilation_options: PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
