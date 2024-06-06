@@ -331,7 +331,9 @@ pub const fn radians(radians: f32) -> Angle {
 /// Shorthand for `Angle { radians: value * PI / 180.0 }`.
 #[inline]
 pub fn degrees(degrees: f32) -> Angle {
-    Angle { radians: degrees * (std::f32::consts::PI / 180.0) }
+    Angle {
+        radians: degrees * (std::f32::consts::PI / 180.0),
+    }
 }
 
 /// Shorthand for `Rect::new(Point::new(x, y), Size::new(width, height))`.

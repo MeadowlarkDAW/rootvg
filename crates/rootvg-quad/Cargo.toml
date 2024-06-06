@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-quad"
-version = "0.1.0"
+version = "0.2.0"
 description = "Quad primitives for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -17,7 +17,7 @@ default = ["gradient"]
 gradient = ["rootvg-core/gradient"]
 
 [dependencies]
-rootvg-core = { version = "0.1", path = "../rootvg-core", default-features = false }
+rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "rootvg"
-version = "0.1.0"
+version = "0.2.0"
 description = "A 2D vector graphics library optimized for GUIs"
 readme = "README.md"
 edition.workspace = true
@@ -26,7 +26,6 @@ members = [
 ]
 
 [workspace.package]
-name = "rootvg"
 edition = "2021"
 authors = ["Billy Messenger <60663878+BillyDM@users.noreply.github.com>"]
 license = "MIT"
@@ -62,13 +61,13 @@ custom-primitive = []
 default-surface = ["dep:pollster"]
 
 [dependencies]
-rootvg-core = { version = "0.1", path = "crates/rootvg-core", default-features = false }
-rootvg-image = { version = "0.1", path = "crates/rootvg-image", optional = true }
-rootvg-mesh = { version = "0.1", path = "crates/rootvg-mesh", default-features = false, optional = true }
-rootvg-msaa = { version = "0.1", path = "crates/rootvg-msaa", optional = true }
-rootvg-quad = { version = "0.1", path = "crates/rootvg-quad", default-features = false, optional = true }
-rootvg-tessellation = { version = "0.1", path = "crates/rootvg-tessellation", default-features = false, optional = true }
-rootvg-text = { version = "0.1", path = "crates/rootvg-text", optional = true }
+rootvg-core = { version = "0.2", path = "crates/rootvg-core", default-features = false }
+rootvg-image = { version = "0.2", path = "crates/rootvg-image", optional = true }
+rootvg-mesh = { version = "0.2", path = "crates/rootvg-mesh", default-features = false, optional = true }
+rootvg-msaa = { version = "0.2", path = "crates/rootvg-msaa", optional = true }
+rootvg-quad = { version = "0.2", path = "crates/rootvg-quad", default-features = false, optional = true }
+rootvg-tessellation = { version = "0.2", path = "crates/rootvg-tessellation", default-features = false, optional = true }
+rootvg-text = { version = "0.2", path = "crates/rootvg-text", optional = true }
 pollster = { version = "0.3.0", optional = true }
 rustc-hash.workspace = true
 log.workspace = true
