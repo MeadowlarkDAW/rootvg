@@ -385,7 +385,7 @@ impl Canvas {
         self.output.order.clear();
 
         // Sort the keys by z index
-        self.temp_keys_for_sorting = self.batches.keys().map(|k| *k).collect();
+        self.temp_keys_for_sorting = self.batches.keys().copied().collect();
         self.temp_keys_for_sorting
             .sort_unstable_by(|a, b| a.z_index.cmp(&b.z_index));
 
