@@ -211,11 +211,7 @@ impl RcTextBuffer {
 
         let raw_buffer = raw_buffer.raw_mut();
 
-        raw_buffer.set_size(
-            font_system,
-            bounds_size.width as f32,
-            bounds_size.height as f32,
-        );
+        raw_buffer.set_size(font_system, bounds_size.width, bounds_size.height);
 
         if *has_text {
             shape(raw_buffer, font_system, props.align);
