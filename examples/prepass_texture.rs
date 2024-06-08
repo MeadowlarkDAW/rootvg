@@ -23,7 +23,7 @@ use rootvg::{
 const WINDOW_SIZE: (f32, f32) = (800.0, 425.0);
 const PREPASS_TEXTURE_SIZE: PhysicalSizeU32 = PhysicalSizeU32::new(200, 200);
 
-static SHADER: &'static str = "
+static SHADER: &str = "
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
 };
