@@ -385,7 +385,7 @@ impl PrimitiveGroup {
     }
 
     #[cfg(feature = "text")]
-    pub fn add_text_batch<'a>(&mut self, buffers: impl IntoIterator<Item = TextPrimitive>) {
+    pub fn add_text_batch(&mut self, buffers: impl IntoIterator<Item = TextPrimitive>) {
         if self.create_new_batch {
             self.create_new_batch = false;
 

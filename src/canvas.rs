@@ -158,11 +158,11 @@ impl Canvas {
         }
     }
 
-    pub fn begin<'a>(
-        &'a mut self,
+    pub fn begin(
+        &mut self,
         physical_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
-    ) -> CanvasCtx<'a> {
+    ) -> CanvasCtx<'_> {
         assert!(physical_size.width > 0);
         assert!(physical_size.height > 0);
         assert!(scale_factor.0 > 0.0);

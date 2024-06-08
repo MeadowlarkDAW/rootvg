@@ -116,7 +116,7 @@ impl RcTextBuffer {
         RefCell::borrow(&self.inner).bounds_size
     }
 
-    pub fn props<'a>(&'a self) -> Ref<'a, TextProperties> {
+    pub fn props(&self) -> Ref<'_, TextProperties> {
         let inner = RefCell::borrow(&self.inner);
         Ref::map(inner, |inner| &inner.props)
     }
@@ -224,7 +224,7 @@ impl RcTextBuffer {
         self.generation += 1;
     }
 
-    pub fn buffer<'a>(&'a self) -> Ref<'a, BufferType> {
+    pub fn buffer(&self) -> Ref<'_, BufferType> {
         let inner = RefCell::borrow(&self.inner);
         Ref::map(inner, |inner| &inner.raw_buffer)
     }
@@ -273,7 +273,7 @@ impl RcTextBuffer {
         }
     }
 
-    pub fn raw_buffer<'a>(&'a self) -> Ref<'a, glyphon::Buffer> {
+    pub fn raw_buffer(&self) -> Ref<'_, glyphon::Buffer> {
         let inner = RefCell::borrow(&self.inner);
         Ref::map(inner, |inner| {
             match &inner.raw_buffer {
