@@ -41,7 +41,7 @@ impl InstanceUniforms {
         // # SAFETY:
         //
         // Neither the rust code nor the shader code reads these padding bytes.
-        #[allow(invalid_value)]
+        #[allow(invalid_value, clippy::uninit_assumed_init)]
         let (_padding1, _padding2): ([f32; 32], [f32; 23]) = unsafe {
             (
                 std::mem::MaybeUninit::uninit().assume_init(),
