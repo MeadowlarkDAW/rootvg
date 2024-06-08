@@ -168,12 +168,8 @@ impl Transform {
     }
 }
 
-impl Tessellator {
-    /// Creates a new empty [`Tessellator`] with the given dimensions.
-    ///
-    /// The default coordinate system of a [`Tessellator`] has its origin at the
-    /// top-left corner of its bounds.
-    pub fn new() -> Self {
+impl Default for Tessellator {
+    fn default() -> Self {
         Self {
             buffers: BufferStack::new(),
             primitives: Vec::new(),
@@ -184,6 +180,16 @@ impl Tessellator {
             fill_tessellator: tessellation::FillTessellator::new(),
             stroke_tessellator: tessellation::StrokeTessellator::new(),
         }
+    }
+}
+
+impl Tessellator {
+    /// Creates a new empty [`Tessellator`] with the given dimensions.
+    ///
+    /// The default coordinate system of a [`Tessellator`] has its origin at the
+    /// top-left corner of its bounds.
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Draws the given [`Path`] on the [`Tessellator`] by filling it with the

@@ -34,14 +34,20 @@ pub struct PrimitiveGroup {
     create_new_batch: bool,
 }
 
-impl PrimitiveGroup {
-    pub fn new() -> Self {
+impl Default for PrimitiveGroup {
+    fn default() -> Self {
         Self {
             primitive_batches: SmallVec::new(),
             current_scissor_rect: None,
             current_z_index: 0,
             create_new_batch: true,
         }
+    }
+}
+
+impl PrimitiveGroup {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn clear(&mut self) {

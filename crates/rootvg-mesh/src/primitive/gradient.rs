@@ -8,7 +8,7 @@ use rootvg_core::math::{Angle, Point, Transform, Vector};
 use super::{Indexed, MeshUniforms};
 
 /// A low-level primitive to render a mesh of triangles with a gradient.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct GradientMesh {
     /// The vertices and indices of the mesh.
     pub buffers: Indexed<GradientVertex2D>,
@@ -16,9 +16,7 @@ pub struct GradientMesh {
 
 impl GradientMesh {
     pub fn new() -> Self {
-        Self {
-            buffers: Indexed::new(),
-        }
+        Self::default()
     }
 }
 
