@@ -113,7 +113,7 @@ impl TextPipeline {
             .map(|(p, b)| TextArea {
                 buffer: b,
                 left: (p.pos.x * self.scale_factor).round(),
-                top: (p.pos.y * self.scale_factor).round() + 0.6,
+                top: (p.pos.y * self.scale_factor).round() + 0.5,
                 scale: self.scale_factor.0,
                 bounds: glyphon::TextBounds {
                     left: ((p.pos.x + p.clipping_bounds.min_x()) * self.scale_factor).round()
