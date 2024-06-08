@@ -170,7 +170,7 @@ impl RcTexture {
                     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
                     let new_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        layout: &texture_bind_group_layout,
+                        layout: texture_bind_group_layout,
                         entries: &[wgpu::BindGroupEntry {
                             binding: 0,
                             resource: wgpu::BindingResource::TextureView(&view),
@@ -214,7 +214,7 @@ impl RcTexture {
                 }
 
                 let new_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    layout: &texture_bind_group_layout,
+                    layout: texture_bind_group_layout,
                     entries: &[wgpu::BindGroupEntry {
                         binding: 0,
                         resource: wgpu::BindingResource::TextureView(view),

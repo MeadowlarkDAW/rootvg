@@ -111,7 +111,7 @@ impl TextPipeline {
             .iter()
             .zip(borrowed_buffers.iter())
             .map(|(p, b)| TextArea {
-                buffer: &*b,
+                buffer: b,
                 left: (p.pos.x * self.scale_factor).round(),
                 top: (p.pos.y * self.scale_factor).round() + 0.5,
                 scale: self.scale_factor.0,
