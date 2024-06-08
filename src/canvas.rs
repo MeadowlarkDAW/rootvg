@@ -134,7 +134,7 @@ impl Canvas {
 
             #[cfg(feature = "msaa")]
             msaa_pipeline: if multisample.count > 1 {
-                Some(MsaaPipeline::new(&device, format, multisample.count))
+                Some(MsaaPipeline::new(device, format, multisample.count))
             } else {
                 None
             },
