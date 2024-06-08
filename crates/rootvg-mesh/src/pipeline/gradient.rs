@@ -99,7 +99,7 @@ impl GradientMeshBatchBuffer {
     ) {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.
-        if primitives == &self.prev_primitives {
+        if primitives == self.prev_primitives {
             return;
         }
         self.prev_primitives = primitives.into();

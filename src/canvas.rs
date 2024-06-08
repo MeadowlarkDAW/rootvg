@@ -134,7 +134,7 @@ impl Canvas {
 
             #[cfg(feature = "msaa")]
             msaa_pipeline: if multisample.count > 1 {
-                Some(MsaaPipeline::new(&device, format, multisample.count))
+                Some(MsaaPipeline::new(device, format, multisample.count))
             } else {
                 None
             },
@@ -158,11 +158,11 @@ impl Canvas {
         }
     }
 
-    pub fn begin<'a>(
-        &'a mut self,
+    pub fn begin(
+        &mut self,
         physical_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
-    ) -> CanvasCtx<'a> {
+    ) -> CanvasCtx<'_> {
         assert!(physical_size.width > 0);
         assert!(physical_size.height > 0);
         assert!(scale_factor.0 > 0.0);
@@ -385,7 +385,7 @@ impl Canvas {
         self.output.order.clear();
 
         // Sort the keys by z index
-        self.temp_keys_for_sorting = self.batches.keys().map(|k| *k).collect();
+        self.temp_keys_for_sorting = self.batches.keys().copied().collect();
         self.temp_keys_for_sorting
             .sort_unstable_by(|a, b| a.z_index.cmp(&b.z_index));
 

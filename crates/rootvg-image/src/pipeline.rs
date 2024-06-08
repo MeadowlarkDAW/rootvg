@@ -55,7 +55,7 @@ impl ImageBatchBuffer {
     ) {
         // Don't prepare if primitives have not changed since the last
         // prepare.
-        if primitives == &self.prev_primitives {
+        if primitives == self.prev_primitives {
             return;
         }
         self.prev_primitives = primitives.into();

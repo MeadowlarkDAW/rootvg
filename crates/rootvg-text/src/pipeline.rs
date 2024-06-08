@@ -92,7 +92,7 @@ impl TextPipeline {
     ) -> Result<(), glyphon::PrepareError> {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.
-        let primitives_are_the_same = primitives == &batch.prev_primitives;
+        let primitives_are_the_same = primitives == batch.prev_primitives;
         if primitives_are_the_same && !self.prepare_all_batches {
             return Ok(());
         }
@@ -111,7 +111,7 @@ impl TextPipeline {
             .iter()
             .zip(borrowed_buffers.iter())
             .map(|(p, b)| TextArea {
-                buffer: &*b,
+                buffer: b,
                 left: (p.pos.x * self.scale_factor).round(),
                 top: (p.pos.y * self.scale_factor).round() + 0.5,
                 scale: self.scale_factor.0,

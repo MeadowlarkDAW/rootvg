@@ -361,8 +361,8 @@ impl ApplicationHandler for DemoApp {
 
                     cx.set_z_index(0);
 
-                    cx.add(state.primitives.solid_quad.clone());
-                    cx.add(state.primitives.gradient_quad.clone());
+                    cx.add(state.primitives.solid_quad);
+                    cx.add(state.primitives.gradient_quad);
                     cx.add(state.primitives.image_primitive.clone());
 
                     // Primitives can also be constructed inline. This is a bit less
@@ -382,7 +382,7 @@ impl ApplicationHandler for DemoApp {
                         SizeI32::new(100, 100),
                     ));
 
-                    cx.add_with_offset(state.primitives.solid_quad.clone(), Point::new(0.0, 150.0));
+                    cx.add_with_offset(state.primitives.solid_quad, Point::new(0.0, 150.0));
 
                     // Calling this will reset the scissoring rectangle to cover the
                     // whole canvas.

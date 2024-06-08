@@ -21,12 +21,18 @@ pub struct Indexed<T> {
     pub indices: Vec<u32>,
 }
 
-impl<T> Indexed<T> {
-    pub fn new() -> Self {
+impl<T> Default for Indexed<T> {
+    fn default() -> Self {
         Self {
             vertices: Vec::new(),
             indices: Vec::new(),
         }
+    }
+}
+
+impl<T> Indexed<T> {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

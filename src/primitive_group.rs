@@ -34,14 +34,20 @@ pub struct PrimitiveGroup {
     create_new_batch: bool,
 }
 
-impl PrimitiveGroup {
-    pub fn new() -> Self {
+impl Default for PrimitiveGroup {
+    fn default() -> Self {
         Self {
             primitive_batches: SmallVec::new(),
             current_scissor_rect: None,
             current_z_index: 0,
             create_new_batch: true,
         }
+    }
+}
+
+impl PrimitiveGroup {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn clear(&mut self) {
@@ -379,7 +385,7 @@ impl PrimitiveGroup {
     }
 
     #[cfg(feature = "text")]
-    pub fn add_text_batch<'a>(&mut self, buffers: impl IntoIterator<Item = TextPrimitive>) {
+    pub fn add_text_batch(&mut self, buffers: impl IntoIterator<Item = TextPrimitive>) {
         if self.create_new_batch {
             self.create_new_batch = false;
 
@@ -428,9 +434,7 @@ impl PrimitiveGroup {
                 self.primitive_batches.push(PrimitiveBatchSlice {
                     z_index: self.current_z_index,
                     scissor_rect: self.current_scissor_rect,
-                    kind: PrimitiveBatchKind::SolidMesh(
-                        meshes.into_iter().map(|mesh| mesh.into()).collect(),
-                    ),
+                    kind: PrimitiveBatchKind::SolidMesh(meshes.into_iter().collect()),
                 });
             }
         }
@@ -461,9 +465,7 @@ impl PrimitiveGroup {
                 self.primitive_batches.push(PrimitiveBatchSlice {
                     z_index: self.current_z_index,
                     scissor_rect: self.current_scissor_rect,
-                    kind: PrimitiveBatchKind::GradientMesh(
-                        meshes.into_iter().map(|mesh| mesh.into()).collect(),
-                    ),
+                    kind: PrimitiveBatchKind::GradientMesh(meshes.into_iter().collect()),
                 });
             }
         }

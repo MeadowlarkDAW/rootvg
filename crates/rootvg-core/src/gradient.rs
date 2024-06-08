@@ -77,7 +77,7 @@ impl LinearGradient {
     /// Creates a new [`Linear`] gradient with the given angle in [`Angle`].
     pub const fn new(angle: Angle) -> Self {
         Self {
-            angle: angle,
+            angle,
             stops: [None; 8],
         }
     }
