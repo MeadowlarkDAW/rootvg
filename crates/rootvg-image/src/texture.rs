@@ -21,6 +21,12 @@ pub(crate) struct TextureInner {
     pub(crate) bind_group: Option<wgpu::BindGroup>,
 }
 
+#[derive(Debug)]
+pub enum TextureReplaceError {
+    DifferentSize,
+    DifferentSourceType,
+}
+
 /// A source of raw image data.
 ///
 /// Once this texture has been uploaded to the GPU, the image
@@ -62,20 +68,22 @@ impl RcTexture {
         }
     }
 
-    // TODO: Custom error
-    pub fn replace_with_image(&mut self, image: impl Into<RgbaImage>) -> Result<(), ()> {
+    pub fn replace_with_image(
+        &mut self,
+        image: impl Into<RgbaImage>,
+    ) -> Result<(), TextureReplaceError> {
         let image: RgbaImage = image.into();
         let dimensions = image.dimensions();
         let size = PhysicalSizeU32::new(dimensions.0, dimensions.1);
 
         if size != self.size {
-            return Err(());
+            return Err(TextureReplaceError::DifferentSize);
         }
 
         let mut inner = RefCell::borrow_mut(&self.inner);
 
         let TextureSource::Image { data_to_upload, .. } = &mut inner.source else {
-            return Err(());
+            return Err(TextureReplaceError::DifferentSourceType);
         };
 
         *data_to_upload = Some(image);
@@ -85,20 +93,19 @@ impl RcTexture {
         Ok(())
     }
 
-    // TODO: Custom error
     pub fn replace_prepass_texture(
         &mut self,
         texture_view: wgpu::TextureView,
         size: PhysicalSizeU32,
-    ) -> Result<(), ()> {
+    ) -> Result<(), TextureReplaceError> {
         if self.size != size {
-            return Err(());
+            return Err(TextureReplaceError::DifferentSize);
         }
 
         let mut inner = RefCell::borrow_mut(&self.inner);
 
         let TextureSource::Prepass { view } = &mut inner.source else {
-            return Err(());
+            return Err(TextureReplaceError::DifferentSourceType);
         };
 
         *view = texture_view;
