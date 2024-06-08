@@ -434,9 +434,7 @@ impl PrimitiveGroup {
                 self.primitive_batches.push(PrimitiveBatchSlice {
                     z_index: self.current_z_index,
                     scissor_rect: self.current_scissor_rect,
-                    kind: PrimitiveBatchKind::SolidMesh(
-                        meshes.into_iter().map(|mesh| mesh.into()).collect(),
-                    ),
+                    kind: PrimitiveBatchKind::SolidMesh(meshes.into_iter().collect()),
                 });
             }
         }
@@ -467,9 +465,7 @@ impl PrimitiveGroup {
                 self.primitive_batches.push(PrimitiveBatchSlice {
                     z_index: self.current_z_index,
                     scissor_rect: self.current_scissor_rect,
-                    kind: PrimitiveBatchKind::GradientMesh(
-                        meshes.into_iter().map(|mesh| mesh.into()).collect(),
-                    ),
+                    kind: PrimitiveBatchKind::GradientMesh(meshes.into_iter().collect()),
                 });
             }
         }
