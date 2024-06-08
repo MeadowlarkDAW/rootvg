@@ -356,9 +356,7 @@ impl Tessellator {
     }
 
     pub fn into_primitive(mut self) -> Option<MeshPrimitive> {
-        let Some(buffer) = self.buffers.stack.drain(..).next() else {
-            return None;
-        };
+        let buffer = self.buffers.stack.drain(..).next()?;
 
         match buffer {
             Buffer::Solid(buffer) => {
