@@ -112,19 +112,19 @@ impl TextPipeline {
             .zip(borrowed_buffers.iter())
             .map(|(p, b)| TextArea {
                 buffer: b,
-                left: (p.pos.x * self.scale_factor).round(),
-                top: (p.pos.y * self.scale_factor).round() + 0.5,
+                left: p.pos.x * self.scale_factor,
+                top: (p.pos.y * self.scale_factor).round(),
                 scale: self.scale_factor.0,
                 bounds: glyphon::TextBounds {
-                    left: ((p.pos.x + p.clipping_bounds.min_x()) * self.scale_factor).round()
+                    left: ((p.pos.x + p.clipping_bounds.min_x()) * self.scale_factor).floor()
                         as i32,
-                    top: ((p.pos.y + p.clipping_bounds.min_y()) * self.scale_factor).round() as i32,
+                    top: ((p.pos.y + p.clipping_bounds.min_y()) * self.scale_factor).floor() as i32,
                     right: ((p.pos.x + p.clipping_bounds.min_x() + p.clipping_bounds.width())
                         * self.scale_factor)
-                        .round() as i32,
+                        .ceil() as i32,
                     bottom: ((p.pos.y + p.clipping_bounds.min_y() + p.clipping_bounds.height())
                         * self.scale_factor)
-                        .round() as i32,
+                        .ceil() as i32,
                 },
                 default_color: glyphon::Color::rgba(p.color.r, p.color.g, p.color.b, p.color.a),
             })
