@@ -35,7 +35,7 @@ impl Clone for DefaultSurfaceConfig {
             desired_maximum_frame_latency: self.desired_maximum_frame_latency,
 
             #[cfg(feature = "msaa")]
-            antialiasing: None,
+            antialiasing: self.antialiasing,
         }
     }
 }
@@ -56,7 +56,7 @@ impl Default for DefaultSurfaceConfig {
             desired_maximum_frame_latency: 2,
 
             #[cfg(feature = "msaa")]
-            antialiasing: Some(rootvg_msaa::Antialiasing::MSAAx2),
+            antialiasing: Some(rootvg_msaa::Antialiasing::MSAAx8),
         }
     }
 }

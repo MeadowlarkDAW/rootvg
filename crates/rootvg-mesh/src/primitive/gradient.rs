@@ -2,8 +2,8 @@
 use bytemuck::{Pod, Zeroable};
 use std::rc::Rc;
 
-use rootvg_core::gradient::PackedGradient;
-use rootvg_core::math::{Angle, Point, Transform, Vector};
+use rootvg_core::gradient::{Gradient, PackedGradient};
+use rootvg_core::math::{Angle, Point, Rect, Transform, Vector};
 
 use super::{Indexed, MeshUniforms};
 
@@ -32,10 +32,10 @@ pub struct GradientVertex2D {
 }
 
 impl GradientVertex2D {
-    pub fn new(position: impl Into<[f32; 2]>, color: impl Into<PackedGradient>) -> Self {
+    pub fn new(position: impl Into<[f32; 2]>, gradient: impl Into<PackedGradient>) -> Self {
         Self {
             position: position.into(),
-            gradient: color.into(),
+            gradient: gradient.into(),
         }
     }
 }
@@ -85,6 +85,47 @@ impl GradientMeshPrimitive {
         Self {
             mesh: Rc::clone(mesh),
             uniform: MeshUniforms::new(offset, Some(transform)),
+        }
+    }
+
+    /// Contruct a non-rotated rectangle mesh with the given gradient.
+    ///
+    /// This is more performant than using the `lyon` drawing API.
+    pub fn from_rect(rect: Rect, gradient: &Gradient) -> Self {
+        Self::from_rect_and_packed_gradient(rect, PackedGradient::new(gradient, rect))
+    }
+
+    /// Contruct a non-rotated rectangle mesh with the given gradient.
+    ///
+    /// This is more performant than using the `lyon` drawing API.
+    pub fn from_rect_and_packed_gradient(rect: Rect, gradient: impl Into<PackedGradient>) -> Self {
+        let gradient: PackedGradient = gradient.into();
+
+        GradientMeshPrimitive {
+            mesh: Rc::new(GradientMesh {
+                buffers: Indexed {
+                    vertices: vec![
+                        GradientVertex2D {
+                            position: [rect.min_x(), rect.min_y()],
+                            gradient,
+                        },
+                        GradientVertex2D {
+                            position: [rect.max_x(), rect.min_y()],
+                            gradient,
+                        },
+                        GradientVertex2D {
+                            position: [rect.max_x(), rect.max_y()],
+                            gradient,
+                        },
+                        GradientVertex2D {
+                            position: [rect.min_x(), rect.max_y()],
+                            gradient,
+                        },
+                    ],
+                    indices: vec![0, 1, 2, 0, 3, 2],
+                },
+            }),
+            uniform: MeshUniforms::default(),
         }
     }
 }

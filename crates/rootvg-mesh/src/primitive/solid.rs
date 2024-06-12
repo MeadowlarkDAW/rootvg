@@ -2,8 +2,8 @@
 use bytemuck::{Pod, Zeroable};
 use std::rc::Rc;
 
-use rootvg_core::color::PackedSrgb;
-use rootvg_core::math::{Angle, Point, Transform, Vector};
+use rootvg_core::color::{PackedSrgb, RGBA8};
+use rootvg_core::math::{Angle, Point, Rect, Transform, Vector};
 
 use super::{Indexed, MeshUniforms};
 
@@ -81,6 +81,40 @@ impl SolidMeshPrimitive {
         Self {
             mesh: Rc::clone(mesh),
             uniform: MeshUniforms::new(offset, Some(transform)),
+        }
+    }
+
+    /// Contruct a non-rotated rectangle mesh with the given color.
+    ///
+    /// This is more performant than using the `lyon` drawing API.
+    pub fn from_rect(rect: Rect, color: RGBA8) -> Self {
+        let color: PackedSrgb = color.into();
+
+        SolidMeshPrimitive {
+            mesh: Rc::new(SolidMesh {
+                buffers: Indexed {
+                    vertices: vec![
+                        SolidVertex2D {
+                            position: [rect.min_x(), rect.min_y()],
+                            color,
+                        },
+                        SolidVertex2D {
+                            position: [rect.max_x(), rect.min_y()],
+                            color,
+                        },
+                        SolidVertex2D {
+                            position: [rect.max_x(), rect.max_y()],
+                            color,
+                        },
+                        SolidVertex2D {
+                            position: [rect.min_x(), rect.max_y()],
+                            color,
+                        },
+                    ],
+                    indices: vec![0, 1, 2, 0, 3, 2],
+                },
+            }),
+            uniform: MeshUniforms::default(),
         }
     }
 }
