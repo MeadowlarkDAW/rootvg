@@ -87,7 +87,7 @@ image = { version = "0.25.0", default-features = false, features = ["rayon", "pn
 [workspace.dependencies]
 rgb = "0.8.37"
 smallvec = "1.13.1"
-rustc-hash = "1.1.0"
+rustc-hash = "2.0.0"
 euclid = { version = "0.22.9", default-features = false }
 wgpu = { version = "0.20.0", default-features = false, features = ["wgsl"] }
 bytemuck = { version = "1.14.1", features = ["derive"] }
