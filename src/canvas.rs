@@ -786,6 +786,12 @@ impl Canvas {
                         height = self.physical_size.height - y;
                     }
 
+                    // TODO: There seems to be a bug in wgpu when setting scissoring rectangles
+                    // with the OpenGL backend, causing rendering issues. Investigate this
+                    // further.
+                    //
+                    // I have only tested the OpenGL backend on my Arch Linux system running on
+                    // an AMD RX570 graphics card with the KDE desktop environment.
                     render_pass.set_scissor_rect(x as u32, y as u32, width as u32, height as u32);
                 }
             }
