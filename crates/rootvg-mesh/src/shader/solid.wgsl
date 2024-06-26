@@ -16,7 +16,16 @@ fn solid_vs_main(input: SolidVertexInput) -> SolidVertexOutput {
 
     var transformed_pos: vec2<f32> = input.position.xy;
     if instance_uniforms.do_transform != 0 {
-        transformed_pos = (instance_uniforms.transform * vec3f(input.position, 1.0)).xy;
+        let transform = mat3x2<f32>(
+            instance_uniforms.transform_0,
+            instance_uniforms.transform_1,
+            instance_uniforms.transform_2,
+            instance_uniforms.transform_3,
+            instance_uniforms.transform_4,
+            instance_uniforms.transform_5,
+        );
+
+        transformed_pos = (transform * vec3f(input.position, 1.0)).xy;
     }
 
     out.position = vec4<f32>(

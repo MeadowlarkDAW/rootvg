@@ -4,8 +4,15 @@ struct Globals {
 }
 
 struct InstanceUniforms {
+    // We can't use a mat3x2<f32> directly because it does not have a stride
+    // of 16, so decompose it like this.
+    transform_0: f32,
+    transform_1: f32,
+    transform_2: f32,
+    transform_3: f32,
+    transform_4: f32,
+    transform_5: f32,
     offset: vec2<f32>,
-    transform: mat3x2<f32>,
     do_transform: u32,
 }
 

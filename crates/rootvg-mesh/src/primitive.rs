@@ -39,14 +39,14 @@ impl<T> Indexed<T> {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct MeshUniforms {
-    /// The offset in logical points.
-    pub offset: [f32; 2],
-
     /// A 2d transform represented by a column-major 3 by 3 matrix, compressed down
     /// to 3 by 2.
     ///
     /// Note that `size` is not included in the `transform`.
     pub transform: [f32; 6],
+
+    /// The offset in logical points.
+    pub offset: [f32; 2],
 
     /// Whether or not to apply the `transform` matrix. This is used to optimize
     /// meshes with no transformations.
