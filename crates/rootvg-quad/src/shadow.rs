@@ -7,6 +7,7 @@ use rootvg_core::math::Point;
 
 /// A shadow.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Shadow {
     /// The color of the shadow.
     pub color: PackedSrgb,

@@ -14,6 +14,7 @@ pub const MAX_STOPS: usize = 8;
 /// A fill which transitions colors progressively along a direction, either linearly, radially (TBD),
 /// or conically (TBD).
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Gradient {
     /// A linear gradient interpolates colors along a direction at a specific angle.
     Linear(LinearGradient),
@@ -54,6 +55,7 @@ impl Default for Gradient {
 ///
 /// [`color`]: Self::color
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ColorStop {
     /// Offset along the gradient vector in the range `[0.0, 1.0]`.
     pub offset: f32,
@@ -66,6 +68,7 @@ pub struct ColorStop {
 
 /// A linear gradient.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LinearGradient {
     /// How the [`Gradient`] is angled within its bounds.
     pub angle: Angle,
@@ -122,6 +125,7 @@ impl LinearGradient {
 /// Packed [`Gradient`] data for use in shader code.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, bytemuck::Zeroable, bytemuck::Pod)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PackedGradient {
     /// 8 colors, each channel = 16 bit float, 2 colors packed into 1 u32
     pub colors: [[u32; 2]; 8],

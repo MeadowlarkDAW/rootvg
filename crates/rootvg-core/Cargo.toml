@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-core"
-version = "0.2.0"
+version = "0.2.1"
 description = "Core library for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -15,6 +15,7 @@ keywords.workspace = true
 [features]
 default = ["gradient"]
 gradient = ["dep:half"]
+serde = ["dep:serde", "rgb/serde", "euclid/serde"]
 
 [dependencies]
 wgpu.workspace = true
@@ -23,3 +24,4 @@ log.workspace = true
 euclid.workspace = true
 bytemuck.workspace = true
 half = { workspace = true, optional = true }
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }

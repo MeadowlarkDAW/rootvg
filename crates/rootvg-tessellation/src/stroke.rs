@@ -63,6 +63,7 @@ impl<'a> Default for Stroke<'a> {
 
 /// The shape used at the end of open subpaths when they are stroked.
 #[derive(Debug, Clone, Copy, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LineCap {
     /// The stroke for each sub-path does not extend beyond its two endpoints.
     #[default]
@@ -78,6 +79,7 @@ pub enum LineCap {
 /// The shape used at the corners of paths or basic shapes when they are
 /// stroked.
 #[derive(Debug, Clone, Copy, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LineJoin {
     /// A sharp corner.
     #[default]

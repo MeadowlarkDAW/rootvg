@@ -33,6 +33,7 @@ pub const TRANSPARENT: RGBA8 = RGBA8 {
 /// Note that the color is assumed to be in SRGB format.
 #[repr(C)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, bytemuck::Zeroable, bytemuck::Pod)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PackedSrgb(pub [f32; 4]);
 
 impl PackedSrgb {

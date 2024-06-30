@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-text"
-version = "0.2.0"
+version = "0.2.1"
 description = "Text primitive for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -11,6 +11,9 @@ categories.workspace = true
 keywords.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = ["rootvg-core/serde"]
 
 [dependencies]
 rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }

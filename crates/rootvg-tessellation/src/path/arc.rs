@@ -7,6 +7,7 @@ use rootvg_core::math::{Angle, Point, Vector};
 
 /// A segment of a differentiable curve.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ArcPath {
     /// The center of the arc.
     pub center: Point,
@@ -20,6 +21,7 @@ pub struct ArcPath {
 
 /// An elliptical [`ArcPath`].
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EllipticalArcPath {
     /// The center of the arc.
     pub center: Point,

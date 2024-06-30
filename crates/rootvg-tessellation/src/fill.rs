@@ -9,6 +9,7 @@ use rootvg_core::gradient::PackedGradient;
 
 /// The style used to fill geometry.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fill {
     /// The color or gradient of the fill.
     ///
@@ -79,6 +80,7 @@ impl From<PackedGradient> for Fill {
 ///
 /// [1]: https://www.w3.org/TR/SVG/painting.html#FillRuleProperty
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FillRule {
     #[default]
     NonZero,
@@ -87,6 +89,7 @@ pub enum FillRule {
 
 /// The coloring style of some drawing.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FillStyle {
     /// A solid [`Color`].
     Solid(PackedSrgb),

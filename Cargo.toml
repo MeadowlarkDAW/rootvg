@@ -1,6 +1,6 @@
 [package]
 name = "rootvg"
-version = "0.2.0"
+version = "0.2.1"
 description = "A 2D vector graphics library optimized for GUIs"
 readme = "README.md"
 edition.workspace = true
@@ -59,6 +59,15 @@ gradient = ["rootvg-core/gradient", "rootvg-quad?/gradient", "rootvg-mesh?/gradi
 custom-primitive = []
 ## Enables a default wgpu surface configuration
 default-surface = ["dep:pollster"]
+serde = [
+    "rootvg-core/serde",
+    "rootvg-image?/serde",
+    "rootvg-mesh?/serde",
+    "rootvg-msaa?/serde",
+    "rootvg-quad?/serde",
+    "rootvg-tessellation?/serde",
+    "rootvg-text?/serde",
+]
 
 [dependencies]
 rootvg-core = { version = "0.2", path = "crates/rootvg-core", default-features = false }

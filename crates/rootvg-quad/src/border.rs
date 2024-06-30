@@ -6,6 +6,7 @@ use rootvg_core::color::PackedSrgb;
 
 /// A struct defining a border.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Border {
     /// The color of the border.
     pub color: PackedSrgb,
@@ -20,6 +21,7 @@ pub struct Border {
 /// The border radii in logical points
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Radius {
     pub top_left: f32,
     pub top_right: f32,
