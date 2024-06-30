@@ -6,6 +6,7 @@ pub type ZIndex = u16;
 
 /// Units in physical pixels.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Physical;
 
 /// A point in units of logical points.
@@ -344,6 +345,7 @@ pub const fn rect(x: f32, y: f32, width: f32, height: f32) -> Rect {
 
 /// A scaling factor in points per pixel.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ScaleFactor(pub f32);
 
 impl ScaleFactor {
