@@ -21,4 +21,4 @@ wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
 #glyphon = "0.5.0"
-glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "2a457087674b0c124d37c85bc6769ba27dcde173" }
+glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "47f4126f999753e14728c0862b822677f1b039e2" }

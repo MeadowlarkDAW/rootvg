@@ -55,6 +55,7 @@ impl Default for TextProperties {
                 weight: Weight::NORMAL,
                 metadata: 0,
                 cache_key_flags: CacheKeyFlags::empty(),
+                metrics_opt: None,
             },
             wrap: Wrap::None,
             shaping: Shaping::Basic,

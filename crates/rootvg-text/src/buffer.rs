@@ -86,7 +86,11 @@ impl RcTextBuffer {
     ) -> Self {
         let mut raw_buffer = glyphon::Buffer::new(font_system, props.metrics);
 
-        raw_buffer.set_size(font_system, bounds_size.width, bounds_size.height);
+        raw_buffer.set_size(
+            font_system,
+            Some(bounds_size.width),
+            Some(bounds_size.height),
+        );
         raw_buffer.set_wrap(font_system, props.wrap);
         raw_buffer.set_text(font_system, text, props.attrs, props.shaping);
 
@@ -211,7 +215,11 @@ impl RcTextBuffer {
 
         let raw_buffer = raw_buffer.raw_mut();
 
-        raw_buffer.set_size(font_system, bounds_size.width, bounds_size.height);
+        raw_buffer.set_size(
+            font_system,
+            Some(bounds_size.width),
+            Some(bounds_size.height),
+        );
 
         if *has_text {
             shape(raw_buffer, font_system, props.align);
