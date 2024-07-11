@@ -37,6 +37,9 @@ use crate::text::{
     TextPrimitive,
 };
 
+#[cfg(all(feature = "text", feature = "svg-icons"))]
+use crate::text::svg::SvgGlyphSystem;
+
 #[cfg(feature = "image")]
 use rootvg_image::{
     pipeline::{ImageBatchBuffer, ImagePipeline},
@@ -105,6 +108,7 @@ impl Canvas {
         queue: &wgpu::Queue,
         format: wgpu::TextureFormat,
         config: CanvasConfig,
+        #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Self {
         let CanvasConfig {
             multisample,
@@ -127,7 +131,7 @@ impl Canvas {
             gradient_quad_pipeline: GradientQuadPipeline::new(device, format, multisample),
 
             #[cfg(feature = "text")]
-            text_pipeline: TextPipeline::new(device, queue, format, multisample),
+            text_pipeline: TextPipeline::new(device, queue, format, multisample, font_system),
 
             #[cfg(feature = "image")]
             image_pipeline: ImagePipeline::new(device, format, multisample),
@@ -217,6 +221,7 @@ impl Canvas {
         target_size: PhysicalSizeI32,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
+        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_glyph_system: &mut SvgGlyphSystem,
     ) -> Result<(), RenderError> {
         assert_eq!(target_size, self.physical_size);
 
@@ -230,6 +235,8 @@ impl Canvas {
             custom_pipelines,
             #[cfg(feature = "text")]
             font_system,
+            #[cfg(all(feature = "text", feature = "svg-icons"))]
+            svg_glyph_system,
         )?;
 
         let clear_color = clear_color.map(|c| wgpu::Color {
@@ -321,6 +328,7 @@ impl Canvas {
         queue: &wgpu::Queue,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
+        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_glyph_system: &mut SvgGlyphSystem,
     ) -> Result<(), RenderError> {
         #[cfg(feature = "custom-primitive")]
         let mut custom_needs_preparing = false;
@@ -527,6 +535,8 @@ impl Canvas {
                     device,
                     queue,
                     font_system,
+                    #[cfg(feature = "svg-icons")]
+                    svg_glyph_system,
                 )?;
 
                 self.output.order.push(BatchKind::Text {

@@ -4,9 +4,9 @@ use glyphon::{
     Cache, FontSystem, Resolution, SwashCache, TextArea, TextAtlas, TextRenderer, Viewport,
 };
 
-use rootvg_core::math::{PhysicalSizeI32, ScaleFactor};
+use rootvg_core::math::{PhysicalSizeI32, ScaleFactor, Size};
 
-use crate::primitive::TextPrimitive;
+use crate::{primitive::TextPrimitive, RcTextBuffer};
 
 pub struct TextBatchBuffer {
     text_renderer: TextRenderer,
@@ -23,6 +23,7 @@ pub struct TextPipeline {
     scale_factor: ScaleFactor,
     prepare_all_batches: bool,
     atlas_needs_trimmed: bool,
+    empty_text_buffer: RcTextBuffer,
 }
 
 impl TextPipeline {
@@ -31,12 +32,16 @@ impl TextPipeline {
         queue: &wgpu::Queue,
         format: wgpu::TextureFormat,
         multisample: wgpu::MultisampleState,
+        font_system: &mut FontSystem,
     ) -> Self {
         let swash_cache = SwashCache::new();
         let cache = Cache::new(device);
         let viewport = Viewport::new(device, &cache);
         let atlas =
             TextAtlas::with_color_mode(device, queue, &cache, format, glyphon::ColorMode::Accurate);
+
+        let empty_text_buffer =
+            RcTextBuffer::new("", Default::default(), Size::default(), false, font_system);
 
         Self {
             swash_cache,
@@ -48,6 +53,7 @@ impl TextPipeline {
             scale_factor: ScaleFactor::default(),
             prepare_all_batches: true,
             atlas_needs_trimmed: false,
+            empty_text_buffer,
         }
     }
 
@@ -89,6 +95,7 @@ impl TextPipeline {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         font_system: &mut FontSystem,
+        #[cfg(feature = "svg-icons")] svg_system: &mut crate::svg::SvgGlyphSystem,
     ) -> Result<(), glyphon::PrepareError> {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.
@@ -104,8 +111,15 @@ impl TextPipeline {
         self.atlas_needs_trimmed = true;
 
         // TODO: Reuse the allocation of these Vecs?
-        let borrowed_buffers: Vec<Ref<'_, glyphon::Buffer>> =
-            primitives.iter().map(|p| p.buffer.raw_buffer()).collect();
+        let borrowed_buffers: Vec<Ref<'_, glyphon::Buffer>> = primitives
+            .iter()
+            .map(|p| {
+                p.buffer
+                    .as_ref()
+                    .map(|b| b.raw_buffer())
+                    .unwrap_or_else(|| self.empty_text_buffer.raw_buffer())
+            })
+            .collect();
 
         let text_areas: Vec<TextArea<'_>> = primitives
             .iter()
@@ -127,6 +141,8 @@ impl TextPipeline {
                         .ceil() as i32,
                 },
                 default_color: glyphon::Color::rgba(p.color.r, p.color.g, p.color.b, p.color.a),
+                #[cfg(feature = "svg-icons")]
+                custom_glyphs: p.icons.as_slice(),
             })
             .collect();
 
@@ -138,6 +154,8 @@ impl TextPipeline {
             &self.viewport,
             text_areas,
             &mut self.swash_cache,
+            #[cfg(feature = "svg-icons")]
+            |input| svg_system.render_custom_glyph(input),
         )
     }
 

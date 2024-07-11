@@ -13,12 +13,19 @@ keywords.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+default = ["svg-icons"]
 serde = ["rootvg-core/serde"]
+svg-icons = ["dep:resvg", "glyphon/custom-glyphs"]
+svg-icon-raster-images = ["svg-icons", "resvg/raster-images"]
 
 [dependencies]
 rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
+smallvec.workspace = true
+rustc-hash.workspace = true
 #glyphon = "0.5.0"
-glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "47f4126f999753e14728c0862b822677f1b039e2" }
+#glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "47f4126f999753e14728c0862b822677f1b039e2" }
+glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "36b4d1c3e9cb35a06c66b0cbc1644b13efb03cba" }
+resvg = { version = "0.42", default-features = false, optional = true }

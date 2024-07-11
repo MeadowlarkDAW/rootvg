@@ -39,7 +39,7 @@ keywords = ["vector", "graphics", "gpu", "2d"]
 all-features = true
 
 [features]
-default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "default-surface"]
+default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "svg-icons", "default-surface"]
 ## Enables drawing meshes of triangles
 mesh = ["dep:rootvg-mesh"]
 ## Enables anti-aliasing using MSAA. This only effects mesh primitives, so consider
@@ -55,6 +55,10 @@ text = ["dep:rootvg-text"]
 image = ["dep:rootvg-image"]
 ## Enables filling quads and meshes with gradients
 gradient = ["rootvg-core/gradient", "rootvg-quad?/gradient", "rootvg-mesh?/gradient", "rootvg-tessellation?/gradient"]
+## Enables rendering svg icons (feature "text" must be enabled)
+svg-icons = ["text", "rootvg-text?/svg-icons"]
+## Enables support for rendering raster images in svg icons
+svg-icon-raster-images = ["text", "svg-icons", "rootvg-text?/svg-icon-raster-images"]
 ## Enables support for custom primitives
 custom-primitive = []
 ## Enables a default wgpu surface configuration

@@ -1,5 +1,9 @@
 use rootvg_mesh::MeshPrimitive;
-use rootvg_text::glyphon::FontSystem;
+use rootvg_text::{
+    svg::{resvg::usvg, SvgGlyphSystem},
+    ContentType, CustomGlyphDesc, FontSystem,
+};
+use smallvec::smallvec;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
@@ -32,6 +36,8 @@ use rootvg::{
 
 const WINDOW_SIZE: (f32, f32) = (800.0, 425.0);
 
+static SVG_ICON: &[u8] = include_bytes!("./music.svg");
+
 fn main() {
     // Set up logging stuff
     let env = env_logger::Env::default().filter_or("LOG_LEVEL", "info");
@@ -42,6 +48,7 @@ fn main() {
         .run_app(&mut DemoApp {
             state: None,
             font_system: FontSystem::new(),
+            svg_glyph_system: SvgGlyphSystem::default(),
         })
         .unwrap();
 }
@@ -60,6 +67,7 @@ struct MyPrimitives {
     solid_quad: SolidQuadPrimitive,
     gradient_quad: GradientQuadPrimitive,
     text_primitive: TextPrimitive,
+    svg_icon_primitive: TextPrimitive,
     image_primitive: ImagePrimitive,
     arc_mesh: MeshPrimitive,
     rect_mesh: MeshPrimitive,
@@ -69,6 +77,7 @@ struct MyPrimitives {
 struct DemoApp {
     state: Option<State>,
     font_system: FontSystem,
+    svg_glyph_system: SvgGlyphSystem,
 }
 
 impl DemoApp {
@@ -122,9 +131,18 @@ impl DemoApp {
             &surface.queue,
             surface.format(),
             surface.canvas_config(),
+            &mut self.font_system,
         );
 
         let primitives = Self::create_primitives(&mut self.font_system);
+
+        // --- Load SVG icons ----------------------------------------------------------------
+
+        self.svg_glyph_system.add_svg(
+            0,
+            usvg::Tree::from_data(SVG_ICON, &Default::default()).unwrap(),
+            ContentType::Mask,
+        );
 
         self.state = Some(State {
             window,
@@ -202,6 +220,23 @@ impl DemoApp {
             // The `glyhpon` crate doesn't use our `PackedSrgb` format.
             RGBA8::new(200, 200, 200, 255),
             None,
+        );
+
+        // --- Svg Icon ----------------------------------------------------------------------
+
+        let svg_icon_primitive = TextPrimitive::new_with_icons(
+            None,
+            Point::new(180.0, 220.0),
+            RGBA8::new(150, 100, 200, 255),
+            Some(Rect::from_size(Size::new(100.0, 100.0))),
+            smallvec![CustomGlyphDesc {
+                id: 0,
+                left: 0.0,
+                top: 0.0,
+                color: None,
+                size: 64.0,
+                metadata: 0,
+            }],
         );
 
         // --- Image -------------------------------------------------------------------------
@@ -313,6 +348,7 @@ impl DemoApp {
             solid_quad,
             gradient_quad,
             text_primitive,
+            svg_icon_primitive,
             image_primitive,
             arc_mesh,
             rect_mesh,
@@ -358,6 +394,7 @@ impl ApplicationHandler for DemoApp {
                     // Because of that, we need add the text primitive with a higher
                     // z index.
                     cx.add(state.primitives.text_primitive.clone());
+                    cx.add(state.primitives.svg_icon_primitive.clone());
 
                     cx.set_z_index(0);
 
@@ -425,6 +462,7 @@ impl ApplicationHandler for DemoApp {
                         &view,
                         state.physical_size,
                         &mut self.font_system,
+                        &mut self.svg_glyph_system,
                     )
                     .unwrap();
 

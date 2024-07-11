@@ -1,4 +1,4 @@
-use rootvg_text::glyphon::FontSystem;
+use rootvg_text::{glyphon::FontSystem, svg::SvgGlyphSystem};
 use std::sync::Arc;
 use wgpu::PipelineCompilationOptions;
 use winit::{
@@ -55,6 +55,7 @@ fn main() {
         .run_app(&mut PrepassTextureApp {
             state: None,
             font_system: FontSystem::new(),
+            svg_glyph_system: SvgGlyphSystem::default(),
         })
         .unwrap();
 }
@@ -75,6 +76,7 @@ struct State {
 struct PrepassTextureApp {
     state: Option<State>,
     font_system: FontSystem,
+    svg_glyph_system: SvgGlyphSystem,
 }
 
 impl PrepassTextureApp {
@@ -125,6 +127,7 @@ impl PrepassTextureApp {
             &surface.queue,
             surface.format(),
             surface.canvas_config(),
+            &mut self.font_system,
         );
 
         // --- Custom prepass pipeline -------------------------------------------------------
@@ -326,6 +329,7 @@ impl ApplicationHandler for PrepassTextureApp {
                         &view,
                         state.physical_size,
                         &mut self.font_system,
+                        &mut self.svg_glyph_system,
                     )
                     .unwrap();
 
