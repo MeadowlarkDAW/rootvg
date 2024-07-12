@@ -303,7 +303,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 // ---------------------------------------------------------------------------------------
 
-use rootvg_text::{glyphon::FontSystem, svg::SvgGlyphSystem};
+use rootvg_text::{glyphon::FontSystem, svg::SvgIconSystem};
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
@@ -330,7 +330,7 @@ fn main() {
         .run_app(&mut CustomPrimitiveApp {
             state: None,
             font_system: FontSystem::new(),
-            svg_glyph_system: SvgGlyphSystem::default(),
+            svg_icon_system: SvgIconSystem::default(),
         })
         .unwrap();
 }
@@ -350,7 +350,7 @@ struct State {
 struct CustomPrimitiveApp {
     state: Option<State>,
     font_system: FontSystem,
-    svg_glyph_system: SvgGlyphSystem,
+    svg_icon_system: SvgIconSystem,
 }
 
 impl CustomPrimitiveApp {
@@ -504,7 +504,7 @@ impl ApplicationHandler for CustomPrimitiveApp {
                         state.physical_size,
                         &mut [&mut state.my_custom_pipeline],
                         &mut self.font_system,
-                        &mut self.svg_glyph_system,
+                        &mut self.svg_icon_system,
                     )
                     .unwrap();
 

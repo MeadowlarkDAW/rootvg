@@ -95,7 +95,7 @@ impl TextPipeline {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         font_system: &mut FontSystem,
-        #[cfg(feature = "svg-icons")] svg_system: &mut crate::svg::SvgGlyphSystem,
+        #[cfg(feature = "svg-icons")] svg_system: &mut crate::svg::SvgIconSystem,
     ) -> Result<(), glyphon::PrepareError> {
         // Don't prepare if the list of primitives hasn't changed since the last
         // preparation.

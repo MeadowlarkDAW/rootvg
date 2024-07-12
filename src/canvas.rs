@@ -38,7 +38,7 @@ use crate::text::{
 };
 
 #[cfg(all(feature = "text", feature = "svg-icons"))]
-use crate::text::svg::SvgGlyphSystem;
+use crate::text::svg::SvgIconSystem;
 
 #[cfg(feature = "image")]
 use rootvg_image::{
@@ -221,7 +221,7 @@ impl Canvas {
         target_size: PhysicalSizeI32,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
-        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_glyph_system: &mut SvgGlyphSystem,
+        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_icon_system: &mut SvgIconSystem,
     ) -> Result<(), RenderError> {
         assert_eq!(target_size, self.physical_size);
 
@@ -236,7 +236,7 @@ impl Canvas {
             #[cfg(feature = "text")]
             font_system,
             #[cfg(all(feature = "text", feature = "svg-icons"))]
-            svg_glyph_system,
+            svg_icon_system,
         )?;
 
         let clear_color = clear_color.map(|c| wgpu::Color {
@@ -328,7 +328,7 @@ impl Canvas {
         queue: &wgpu::Queue,
         #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
-        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_glyph_system: &mut SvgGlyphSystem,
+        #[cfg(all(feature = "text", feature = "svg-icons"))] svg_icon_system: &mut SvgIconSystem,
     ) -> Result<(), RenderError> {
         #[cfg(feature = "custom-primitive")]
         let mut custom_needs_preparing = false;
@@ -536,7 +536,7 @@ impl Canvas {
                     queue,
                     font_system,
                     #[cfg(feature = "svg-icons")]
-                    svg_glyph_system,
+                    svg_icon_system,
                 )?;
 
                 self.output.order.push(BatchKind::Text {

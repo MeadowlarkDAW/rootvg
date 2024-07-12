@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use glyphon::{ContentType, CustomGlyphInput, CustomGlyphOutput};
 use resvg::{tiny_skia::Pixmap, usvg::Transform};
 use rustc_hash::FxHashMap;
@@ -7,32 +9,88 @@ pub use resvg;
 
 use crate::CustomGlyphID;
 
+/// A system for loading, parsing, and rastering SVG icons
 #[derive(Default)]
-pub struct SvgGlyphSystem {
+pub struct SvgIconSystem {
     svgs: FxHashMap<CustomGlyphID, SvgData>,
 }
 
-impl SvgGlyphSystem {
-    /// Add an svg source to this system.
+impl SvgIconSystem {
+    /// Add an svg source to from an [`resvg::usvg::Tree`].
     ///
     /// * id - A unique identifier for this resource.
-    /// * source - The parsed SVG data.
+    /// * tree - The parsed SVG data.
     /// * is_symbolic - If `true`, then only the alpha channel will be used and the icon can
     /// be filled with any solid color. If `false`, then the icon will be rendered in full
     /// color.
-    pub fn add_svg(
+    pub fn add_from_tree(
         &mut self,
         id: CustomGlyphID,
-        source: resvg::usvg::Tree,
+        tree: resvg::usvg::Tree,
         content_type: ContentType,
     ) {
-        self.svgs.insert(
-            id,
-            SvgData {
-                tree: source,
-                content_type,
-            },
-        );
+        self.svgs.insert(id, SvgData { tree, content_type });
+    }
+
+    /// Add an svg source from raw bytes.
+    ///
+    /// * id - A unique identifier for this resource
+    /// * data - The raw SVG file as bytes
+    /// * opts - Additional options for parsing the SVG file
+    /// * is_symbolic - If `true`, then only the alpha channel will be used and the icon can
+    /// be filled with any solid color. If `false`, then the icon will be rendered in full
+    /// color.
+    pub fn add_from_bytes(
+        &mut self,
+        id: CustomGlyphID,
+        data: &[u8],
+        opt: &resvg::usvg::Options<'_>,
+        content_type: ContentType,
+    ) -> Result<(), resvg::usvg::Error> {
+        let tree = resvg::usvg::Tree::from_data(data, opt)?;
+        self.add_from_tree(id, tree, content_type);
+        Ok(())
+    }
+
+    /// Add an svg source from a string.
+    ///
+    /// * id - A unique identifier for this resource
+    /// * str - The SVG data as a string
+    /// * opts - Additional options for parsing the SVG file
+    /// * is_symbolic - If `true`, then only the alpha channel will be used and the icon can
+    /// be filled with any solid color. If `false`, then the icon will be rendered in full
+    /// color.
+    pub fn add_from_str(
+        &mut self,
+        id: CustomGlyphID,
+        text: &str,
+        opt: &resvg::usvg::Options<'_>,
+        content_type: ContentType,
+    ) -> Result<(), resvg::usvg::Error> {
+        let tree = resvg::usvg::Tree::from_str(text, opt)?;
+        self.add_from_tree(id, tree, content_type);
+        Ok(())
+    }
+
+    /// Add an svg source from a file path.
+    ///
+    /// * id - A unique identifier for this resource
+    /// * path - The path to the SVG file
+    /// * opts - Additional options for parsing the SVG file
+    /// * is_symbolic - If `true`, then only the alpha channel will be used and the icon can
+    /// be filled with any solid color. If `false`, then the icon will be rendered in full
+    /// color.
+    pub fn add_from_path(
+        &mut self,
+        id: CustomGlyphID,
+        path: &Path,
+        opt: &resvg::usvg::Options<'_>,
+        content_type: ContentType,
+    ) -> Result<(), LoadSvgError> {
+        let data = std::fs::read(path)?;
+        let tree = resvg::usvg::Tree::from_data(&data, opt)?;
+        self.add_from_tree(id, tree, content_type);
+        Ok(())
     }
 
     // Returns `true` if the source was removed, or `false` if there was
@@ -41,6 +99,7 @@ impl SvgGlyphSystem {
         self.svgs.remove(&id).is_some()
     }
 
+    /// Rasterize the SVG icon.
     pub fn render_custom_glyph(&mut self, input: CustomGlyphInput) -> Option<CustomGlyphOutput> {
         let Some(svg_data) = self.svgs.get(&input.id) else {
             return None;
@@ -102,4 +161,13 @@ impl SvgGlyphSystem {
 struct SvgData {
     tree: resvg::usvg::Tree,
     content_type: ContentType,
+}
+
+/// An error occured while loading an SVG file
+#[derive(Debug, thiserror::Error)]
+pub enum LoadSvgError {
+    #[error("Error loading svg file: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Error parsing svg file: {0}")]
+    ParseError(#[from] resvg::usvg::Error),
 }

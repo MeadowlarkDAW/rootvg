@@ -1,8 +1,5 @@
 use rootvg_mesh::MeshPrimitive;
-use rootvg_text::{
-    svg::{resvg::usvg, SvgGlyphSystem},
-    ContentType, CustomGlyphDesc, FontSystem,
-};
+use rootvg_text::{svg::SvgIconSystem, ContentType, CustomGlyphDesc, FontSystem};
 use smallvec::smallvec;
 use std::sync::Arc;
 use winit::{
@@ -48,7 +45,7 @@ fn main() {
         .run_app(&mut DemoApp {
             state: None,
             font_system: FontSystem::new(),
-            svg_glyph_system: SvgGlyphSystem::default(),
+            svg_icon_system: SvgIconSystem::default(),
         })
         .unwrap();
 }
@@ -77,7 +74,7 @@ struct MyPrimitives {
 struct DemoApp {
     state: Option<State>,
     font_system: FontSystem,
-    svg_glyph_system: SvgGlyphSystem,
+    svg_icon_system: SvgIconSystem,
 }
 
 impl DemoApp {
@@ -138,11 +135,9 @@ impl DemoApp {
 
         // --- Load SVG icons ----------------------------------------------------------------
 
-        self.svg_glyph_system.add_svg(
-            0,
-            usvg::Tree::from_data(SVG_ICON, &Default::default()).unwrap(),
-            ContentType::Mask,
-        );
+        self.svg_icon_system
+            .add_from_bytes(0, SVG_ICON, &Default::default(), ContentType::Mask)
+            .unwrap();
 
         self.state = Some(State {
             window,
@@ -462,7 +457,7 @@ impl ApplicationHandler for DemoApp {
                         &view,
                         state.physical_size,
                         &mut self.font_system,
-                        &mut self.svg_glyph_system,
+                        &mut self.svg_icon_system,
                     )
                     .unwrap();
 
