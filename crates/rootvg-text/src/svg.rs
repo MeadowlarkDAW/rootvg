@@ -25,11 +25,11 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_tree(
         &mut self,
-        id: CustomGlyphID,
+        id: impl Into<CustomGlyphID>,
         tree: resvg::usvg::Tree,
         content_type: ContentType,
     ) {
-        self.svgs.insert(id, SvgData { tree, content_type });
+        self.svgs.insert(id.into(), SvgData { tree, content_type });
     }
 
     /// Add an svg source from raw bytes.
@@ -42,7 +42,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_bytes(
         &mut self,
-        id: CustomGlyphID,
+        id: impl Into<CustomGlyphID>,
         data: &[u8],
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -62,7 +62,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_str(
         &mut self,
-        id: CustomGlyphID,
+        id: impl Into<CustomGlyphID>,
         text: &str,
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -82,7 +82,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_path(
         &mut self,
-        id: CustomGlyphID,
+        id: impl Into<CustomGlyphID>,
         path: &Path,
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -95,8 +95,8 @@ impl SvgIconSystem {
 
     // Returns `true` if the source was removed, or `false` if there was
     // no source with that ID.
-    pub fn remove(&mut self, id: CustomGlyphID) -> bool {
-        self.svgs.remove(&id).is_some()
+    pub fn remove(&mut self, id: impl Into<CustomGlyphID>) -> bool {
+        self.svgs.remove(&id.into()).is_some()
     }
 
     /// Rasterize the SVG icon.

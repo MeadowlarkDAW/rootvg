@@ -1,4 +1,8 @@
-<h1><img src="./assets/logo.svg" width="64px" height="64px"/> RootVG</h1>
+<div align="center">
+
+<img src="assets/logo.svg" width="140px" />
+
+# RootVG
 
 [![Documentation](https://docs.rs/rootvg/badge.svg)](https://docs.rs/rootvg)
 [![Crates.io](https://img.shields.io/crates/v/rootvg.svg)](https://crates.io/crates/rootvg)

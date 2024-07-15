@@ -136,7 +136,7 @@ impl DemoApp {
         // --- Load SVG icons ----------------------------------------------------------------
 
         self.svg_icon_system
-            .add_from_bytes(0, SVG_ICON, &Default::default(), ContentType::Mask)
+            .add_from_bytes(0u16, SVG_ICON, &Default::default(), ContentType::Mask)
             .unwrap();
 
         self.state = Some(State {
