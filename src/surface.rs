@@ -369,7 +369,7 @@ impl DefaultSurface {
 #[cfg(feature = "default-surface")]
 #[derive(thiserror::Error, Debug)]
 pub enum NewSurfaceError {
-    #[error("failed to create wgpu surface from window")]
+    #[error("failed to create wgpu surface from window: {0}")]
     CouldNotCreateSurface(#[from] wgpu::CreateSurfaceError),
     #[error("failed to get compatible wgpu adapter")]
     CouldNotGetAdapter,
