@@ -111,7 +111,8 @@ impl SvgIconSystem {
         let should_rasterize = max_side_len > 0.0;
 
         let (scale, width, height, pixmap) = if should_rasterize {
-            let scale = input.size / max_side_len;
+            let glyph_size = input.size * input.scale;
+            let scale = glyph_size / max_side_len;
             let width = (svg_size.width() * scale).ceil();
             let height = (svg_size.height() * scale).ceil();
 

@@ -25,7 +25,5 @@ thiserror.workspace = true
 bytemuck.workspace = true
 smallvec.workspace = true
 rustc-hash.workspace = true
-#glyphon = "0.5.0"
-#glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "47f4126f999753e14728c0862b822677f1b039e2" }
-glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "36b4d1c3e9cb35a06c66b0cbc1644b13efb03cba" }
+glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "c819d8c952b850e7993f0007d807a5da301ef799" }
 resvg = { version = "0.42", default-features = false, optional = true }
