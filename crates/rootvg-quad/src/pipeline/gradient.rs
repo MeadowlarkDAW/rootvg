@@ -105,6 +105,7 @@ impl GradientQuadPipeline {
             depth_stencil: None,
             multisample,
             multiview: None,
+            cache: None,
         });
 
         Self {

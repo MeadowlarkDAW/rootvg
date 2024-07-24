@@ -228,6 +228,7 @@ impl SolidMeshPipeline {
             depth_stencil: None,
             multisample,
             multiview: None,
+            cache: None,
         });
 
         Self {

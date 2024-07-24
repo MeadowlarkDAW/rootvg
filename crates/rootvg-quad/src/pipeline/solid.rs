@@ -97,6 +97,7 @@ impl SolidQuadPipeline {
             depth_stencil: None,
             multisample,
             multiview: None,
+            cache: None,
         });
 
         Self {

@@ -13,6 +13,7 @@ pub struct DefaultSurfaceConfig {
     pub force_fallback_adapter: bool,
     pub limits: Option<wgpu::Limits>,
     pub desired_maximum_frame_latency: u32,
+    pub memory_hints: wgpu::MemoryHints,
 
     #[cfg(feature = "msaa")]
     pub antialiasing: Option<rootvg_msaa::Antialiasing>,
@@ -33,6 +34,7 @@ impl Clone for DefaultSurfaceConfig {
             force_fallback_adapter: self.force_fallback_adapter,
             limits: self.limits.clone(),
             desired_maximum_frame_latency: self.desired_maximum_frame_latency,
+            memory_hints: self.memory_hints.clone(),
 
             #[cfg(feature = "msaa")]
             antialiasing: self.antialiasing,
@@ -54,6 +56,7 @@ impl Default for DefaultSurfaceConfig {
             force_fallback_adapter: false,
             limits: None,
             desired_maximum_frame_latency: 2,
+            memory_hints: wgpu::MemoryHints::default(),
 
             #[cfg(feature = "msaa")]
             antialiasing: Some(rootvg_msaa::Antialiasing::MSAAx8),
@@ -108,6 +111,7 @@ impl DefaultSurface {
             force_fallback_adapter,
             limits,
             desired_maximum_frame_latency,
+            memory_hints,
         } = config;
 
         let instance = wgpu::Instance::new(instance_descriptor);
@@ -224,6 +228,7 @@ impl DefaultSurface {
                         label: Some("rootvg::renderer device descriptor"),
                         required_features,
                         required_limits,
+                        memory_hints: memory_hints.clone(),
                     },
                     None,
                 )

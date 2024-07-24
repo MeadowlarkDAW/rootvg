@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-text"
-version = "0.2.1"
+version = "0.3.0"
 description = "Text primitive for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -19,11 +19,11 @@ svg-icons = ["dep:resvg", "glyphon/custom-glyphs"]
 svg-icon-raster-images = ["svg-icons", "resvg/raster-images"]
 
 [dependencies]
-rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
+rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
 smallvec.workspace = true
 rustc-hash.workspace = true
-glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "c819d8c952b850e7993f0007d807a5da301ef799" }
+glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "a5d86e9e1e984dd39ef0aeef9efe604cc08dd6a2" }
 resvg = { version = "0.42", default-features = false, optional = true }

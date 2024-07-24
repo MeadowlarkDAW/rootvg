@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-msaa"
-version = "0.2.1"
+version = "0.3.0"
 description = "MSAA antialiasing for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -16,7 +16,7 @@ keywords.workspace = true
 serde = ["dep:serde", "rootvg-core/serde"]
 
 [dependencies]
-rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
+rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true

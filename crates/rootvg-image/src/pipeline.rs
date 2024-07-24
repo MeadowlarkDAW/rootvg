@@ -253,6 +253,7 @@ impl ImagePipeline {
             depth_stencil: None,
             multisample,
             multiview: None,
+            cache: None,
         });
 
         Self {

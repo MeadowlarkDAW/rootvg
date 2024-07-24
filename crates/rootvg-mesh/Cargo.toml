@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-mesh"
-version = "0.2.2"
+version = "0.3.0"
 description = "Mesh primitives for RootVG"
 edition.workspace = true
 authors.workspace = true
@@ -18,7 +18,7 @@ gradient = ["rootvg-core/gradient"]
 serde = ["rootvg-core/serde"]
 
 [dependencies]
-rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
+rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true

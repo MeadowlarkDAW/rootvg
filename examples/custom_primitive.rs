@@ -114,6 +114,7 @@ mod my_custom_primitive {
                 depth_stencil: None,
                 multisample,
                 multiview: None,
+                cache: None,
             });
 
             let vertex_buffer = Buffer::new(

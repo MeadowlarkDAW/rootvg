@@ -1,6 +1,6 @@
 [package]
 name = "rootvg-tessellation"
-version = "0.2.1"
+version = "0.3.0"
 description = "Tessellate paths into a RootVG mesh primitive"
 edition.workspace = true
 authors.workspace = true
@@ -18,8 +18,8 @@ gradient = ["rootvg-core/gradient", "rootvg-mesh/gradient"]
 serde = ["dep:serde", "lyon/serialization", "rootvg-core/serde"]
 
 [dependencies]
-rootvg-core = { version = "0.2", path = "../rootvg-core", default-features = false }
-rootvg-mesh = { version = "0.2", path = "../rootvg-mesh", default-features = false }
+rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = false }
+rootvg-mesh = { version = "0.3", path = "../rootvg-mesh", default-features = false }
 wgpu.workspace = true
 thiserror.workspace = true
 lyon = "1.0.1"

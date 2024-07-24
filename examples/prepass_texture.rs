@@ -189,6 +189,7 @@ impl PrepassTextureApp {
                         alpha_to_coverage_enabled: false,
                     },
                     multiview: None,
+                    cache: None,
                 });
 
         let texture_size = wgpu::Extent3d {
