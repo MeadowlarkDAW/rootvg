@@ -28,6 +28,12 @@ pub const TRANSPARENT: RGBA8 = RGBA8 {
     a: 0,
 };
 
+/// Returns a color whose alpha is multiplied by the given multiplier.
+pub fn multiply_alpha(color: RGBA8, multiplier: f32) -> RGBA8 {
+    let alpha = (f32::from(color.a) * multiplier).round().clamp(0.0, 255.0) as u8;
+    color.with_alpha(alpha)
+}
+
 /// A color packed as 4 floats representing RGBA channels.
 ///
 /// Note that the color is assumed to be in SRGB format.
