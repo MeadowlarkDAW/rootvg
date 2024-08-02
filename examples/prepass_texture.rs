@@ -64,7 +64,7 @@ struct State {
     window: Arc<Window>,
     physical_size: PhysicalSizeI32,
     scale_factor: ScaleFactor,
-    surface: DefaultSurface,
+    surface: DefaultSurface<'static>,
     canvas: Canvas,
     clear_color: PackedSrgb,
 

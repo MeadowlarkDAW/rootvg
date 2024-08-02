@@ -65,10 +65,10 @@ impl Default for DefaultSurfaceConfig {
 }
 
 /// The default wgpu surface handled by RootVG.
-pub struct DefaultSurface {
+pub struct DefaultSurface<'a> {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
-    pub surface: wgpu::Surface<'static>,
+    pub surface: wgpu::Surface<'a>,
     pub surface_config: wgpu::SurfaceConfiguration,
     scale_factor: ScaleFactor,
 
@@ -76,18 +76,17 @@ pub struct DefaultSurface {
     largest_compatible_aa: Option<rootvg_msaa::Antialiasing>,
 }
 
-impl DefaultSurface {
+impl<'a> DefaultSurface<'a> {
     /// Create a new surface from the given window handle.
     ///
     /// - `size` - The size of the surface in physical pixels
     /// - `scale_factor` - The scale factor of the surface in pixels per point
-    /// - `window` - A handle to the window (should be wrapped in an `Arc` to give
-    /// it a static lifetime)
+    /// - `window` - A handle to the window
     /// - `config` - Additional settings for the surface
     pub fn new(
         physical_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
-        window: impl Into<wgpu::SurfaceTarget<'static>>,
+        window: impl Into<wgpu::SurfaceTarget<'a>>,
         config: DefaultSurfaceConfig,
     ) -> Result<Self, NewSurfaceError> {
         pollster::block_on(Self::new_async(physical_size, scale_factor, window, config))
@@ -96,7 +95,7 @@ impl DefaultSurface {
     async fn new_async(
         physical_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
-        window: impl Into<wgpu::SurfaceTarget<'static>>,
+        window: impl Into<wgpu::SurfaceTarget<'a>>,
         config: DefaultSurfaceConfig,
     ) -> Result<Self, NewSurfaceError> {
         assert!(physical_size.width > 0);
