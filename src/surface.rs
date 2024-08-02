@@ -64,6 +64,18 @@ impl Default for DefaultSurfaceConfig {
     }
 }
 
+struct SurfaceConfigInner {
+    present_mode: wgpu::PresentMode,
+    power_preference: wgpu::PowerPreference,
+    force_fallback_adapter: bool,
+    limits: Option<wgpu::Limits>,
+    desired_maximum_frame_latency: u32,
+    memory_hints: wgpu::MemoryHints,
+
+    #[cfg(feature = "msaa")]
+    antialiasing: Option<rootvg_msaa::Antialiasing>,
+}
+
 /// The default wgpu surface handled by RootVG.
 pub struct DefaultSurface<'a> {
     pub device: wgpu::Device,
@@ -81,18 +93,10 @@ impl<'a> DefaultSurface<'a> {
     ///
     /// - `size` - The size of the surface in physical pixels
     /// - `scale_factor` - The scale factor of the surface in pixels per point
-    /// - `window` - A handle to the window
+    /// - `window` - A handle to the window. (Note, to give [`DefaultSurface`] a static
+    /// lifetime, wrap the window handle inside of an `Arc`).
     /// - `config` - Additional settings for the surface
     pub fn new(
-        physical_size: PhysicalSizeI32,
-        scale_factor: ScaleFactor,
-        window: impl Into<wgpu::SurfaceTarget<'a>>,
-        config: DefaultSurfaceConfig,
-    ) -> Result<Self, NewSurfaceError> {
-        pollster::block_on(Self::new_async(physical_size, scale_factor, window, config))
-    }
-
-    async fn new_async(
         physical_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
         window: impl Into<wgpu::SurfaceTarget<'a>>,
@@ -126,6 +130,105 @@ impl<'a> DefaultSurface<'a> {
         }
 
         let surface = instance.create_surface(window)?;
+
+        pollster::block_on(Self::new_async(
+            physical_size,
+            scale_factor,
+            instance,
+            surface,
+            SurfaceConfigInner {
+                present_mode,
+                power_preference,
+                force_fallback_adapter,
+                limits,
+                desired_maximum_frame_latency,
+                memory_hints,
+                #[cfg(feature = "msaa")]
+                antialiasing,
+            },
+        ))
+    }
+
+    /// Create a new surface from the given window handle.
+    ///
+    /// - `size` - The size of the surface in physical pixels
+    /// - `scale_factor` - The scale factor of the surface in pixels per point
+    /// - `window` - A handle to the window
+    /// - `config` - Additional settings for the surface
+    ///
+    /// # Safety
+    ///
+    /// * `window` must outlive the resulting surface target (and subsequently the surface created for this target).
+    pub unsafe fn new_unsafe(
+        physical_size: PhysicalSizeI32,
+        scale_factor: ScaleFactor,
+        window: wgpu::SurfaceTargetUnsafe,
+        config: DefaultSurfaceConfig,
+    ) -> Result<Self, NewSurfaceError> {
+        assert!(physical_size.width > 0);
+        assert!(physical_size.height > 0);
+
+        let DefaultSurfaceConfig {
+            #[cfg(feature = "msaa")]
+            antialiasing,
+            present_mode,
+            power_preference,
+            instance_descriptor,
+            force_fallback_adapter,
+            limits,
+            desired_maximum_frame_latency,
+            memory_hints,
+        } = config;
+
+        let instance = wgpu::Instance::new(instance_descriptor);
+
+        if log::max_level() > log::LevelFilter::Info {
+            let available_adapters: Vec<_> = instance
+                .enumerate_adapters(wgpu::Backends::all())
+                .iter()
+                .map(wgpu::Adapter::get_info)
+                .collect();
+
+            log::trace!("available wgpu adapters: {available_adapters:#?}");
+        }
+
+        let surface = instance.create_surface_unsafe(window)?;
+
+        pollster::block_on(Self::new_async(
+            physical_size,
+            scale_factor,
+            instance,
+            surface,
+            SurfaceConfigInner {
+                present_mode,
+                power_preference,
+                force_fallback_adapter,
+                limits,
+                desired_maximum_frame_latency,
+                memory_hints,
+                #[cfg(feature = "msaa")]
+                antialiasing,
+            },
+        ))
+    }
+
+    async fn new_async(
+        physical_size: PhysicalSizeI32,
+        scale_factor: ScaleFactor,
+        instance: wgpu::Instance,
+        surface: wgpu::Surface<'a>,
+        config: SurfaceConfigInner,
+    ) -> Result<Self, NewSurfaceError> {
+        let SurfaceConfigInner {
+            #[cfg(feature = "msaa")]
+            antialiasing,
+            present_mode,
+            power_preference,
+            force_fallback_adapter,
+            limits,
+            desired_maximum_frame_latency,
+            memory_hints,
+        } = config;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
