@@ -4,7 +4,7 @@ use glyphon::{
     Cache, FontSystem, Resolution, SwashCache, TextArea, TextAtlas, TextRenderer, Viewport,
 };
 
-use rootvg_core::math::{PhysicalSizeI32, ScaleFactor, Size};
+use rootvg_core::math::{PhysicalSizeI32, ScaleFactor};
 
 use crate::{primitive::TextPrimitive, RcTextBuffer};
 
@@ -41,7 +41,7 @@ impl TextPipeline {
             TextAtlas::with_color_mode(device, queue, &cache, format, glyphon::ColorMode::Accurate);
 
         let empty_text_buffer =
-            RcTextBuffer::new("", Default::default(), Size::default(), false, font_system);
+            RcTextBuffer::new("", Default::default(), None, None, false, font_system);
 
         Self {
             swash_cache,
@@ -110,6 +110,13 @@ impl TextPipeline {
 
         self.atlas_needs_trimmed = true;
 
+        let default_clipping_bounds = glyphon::TextBounds {
+            left: 0,
+            top: 0,
+            right: self.screen_size.width,
+            bottom: self.screen_size.height,
+        };
+
         // TODO: Reuse the allocation of these Vecs?
         let borrowed_buffers: Vec<Ref<'_, glyphon::Buffer>> = primitives
             .iter()
@@ -129,17 +136,17 @@ impl TextPipeline {
                 left: p.pos.x * self.scale_factor,
                 top: (p.pos.y * self.scale_factor).round(),
                 scale: self.scale_factor.0,
-                bounds: glyphon::TextBounds {
-                    left: ((p.pos.x + p.clipping_bounds.min_x()) * self.scale_factor).floor()
-                        as i32,
-                    top: ((p.pos.y + p.clipping_bounds.min_y()) * self.scale_factor).floor() as i32,
-                    right: ((p.pos.x + p.clipping_bounds.min_x() + p.clipping_bounds.width())
-                        * self.scale_factor)
-                        .ceil() as i32,
-                    bottom: ((p.pos.y + p.clipping_bounds.min_y() + p.clipping_bounds.height())
-                        * self.scale_factor)
-                        .ceil() as i32,
-                },
+                bounds: p
+                    .clipping_bounds
+                    .map(|bounds| glyphon::TextBounds {
+                        left: ((p.pos.x + bounds.min_x()) * self.scale_factor).floor() as i32,
+                        top: ((p.pos.y + bounds.min_y()) * self.scale_factor).floor() as i32,
+                        right: ((p.pos.x + bounds.min_x() + bounds.width()) * self.scale_factor)
+                            .ceil() as i32,
+                        bottom: ((p.pos.y + bounds.min_y() + bounds.height()) * self.scale_factor)
+                            .ceil() as i32,
+                    })
+                    .unwrap_or(default_clipping_bounds),
                 default_color: glyphon::Color::rgba(p.color.r, p.color.g, p.color.b, p.color.a),
                 #[cfg(feature = "svg-icons")]
                 custom_glyphs: p.icons.as_slice(),

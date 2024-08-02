@@ -204,8 +204,9 @@ impl DemoApp {
                 ..Default::default()
             },
             // The "bounds" denotes the visible area. Any text that lies outside of this
-            // bounds is clipped.
-            Size::new(100.0, 100.0),
+            // bounds wrapped/clipped depending on the text properties.
+            None,
+            None,
             false,
             font_system,
         );

@@ -65,7 +65,8 @@ impl BufferType {
 struct TextBufferInner {
     raw_buffer: BufferType,
     props: TextProperties,
-    bounds_size: Size,
+    bounds_width: Option<f32>,
+    bounds_height: Option<f32>,
     has_text: bool,
 }
 
@@ -80,17 +81,14 @@ impl RcTextBuffer {
     pub fn new(
         text: &str,
         props: TextProperties,
-        bounds_size: Size,
+        bounds_width: Option<f32>,
+        bounds_height: Option<f32>,
         is_editor: bool,
         font_system: &mut FontSystem,
     ) -> Self {
         let mut raw_buffer = glyphon::Buffer::new(font_system, props.metrics);
 
-        raw_buffer.set_size(
-            font_system,
-            Some(bounds_size.width),
-            Some(bounds_size.height),
-        );
+        raw_buffer.set_size(font_system, bounds_width, bounds_height);
         raw_buffer.set_wrap(font_system, props.wrap);
         raw_buffer.set_text(font_system, text, props.attrs, props.shaping);
 
@@ -109,15 +107,20 @@ impl RcTextBuffer {
             inner: Rc::new(RefCell::new(TextBufferInner {
                 raw_buffer,
                 props,
-                bounds_size,
+                bounds_width,
+                bounds_height,
                 has_text,
             })),
             generation: 0,
         }
     }
 
-    pub fn bounds_size(&self) -> Size {
-        RefCell::borrow(&self.inner).bounds_size
+    pub fn bounds_width(&self) -> Option<f32> {
+        RefCell::borrow(&self.inner).bounds_width
+    }
+
+    pub fn bounds_height(&self) -> Option<f32> {
+        RefCell::borrow(&self.inner).bounds_height
     }
 
     pub fn props(&self) -> Ref<'_, TextProperties> {
@@ -181,7 +184,8 @@ impl RcTextBuffer {
         let TextBufferInner {
             raw_buffer,
             props,
-            bounds_size: _,
+            bounds_width: _,
+            bounds_height: _,
             has_text,
         } = &mut *inner;
 
@@ -199,27 +203,30 @@ impl RcTextBuffer {
     }
 
     /// Set the bounds of the text in logical points.
-    pub fn set_bounds(&mut self, bounds_size: Size, font_system: &mut FontSystem) {
+    pub fn set_bounds(
+        &mut self,
+        bounds_width: Option<f32>,
+        bounds_height: Option<f32>,
+        font_system: &mut FontSystem,
+    ) {
         let mut inner = RefCell::borrow_mut(&self.inner);
         let TextBufferInner {
             raw_buffer,
             props,
-            bounds_size: inner_bounds_size,
+            bounds_width: inner_bounds_width,
+            bounds_height: inner_bounds_height,
             has_text,
         } = &mut *inner;
 
-        if *inner_bounds_size == bounds_size {
+        if *inner_bounds_width == bounds_width && *inner_bounds_height == bounds_height {
             return;
         }
-        *inner_bounds_size = bounds_size;
+        *inner_bounds_width = bounds_width;
+        *inner_bounds_height = bounds_height;
 
         let raw_buffer = raw_buffer.raw_mut();
 
-        raw_buffer.set_size(
-            font_system,
-            Some(bounds_size.width),
-            Some(bounds_size.height),
-        );
+        raw_buffer.set_size(font_system, bounds_width, bounds_height);
 
         if *has_text {
             shape(raw_buffer, font_system, props.align);
@@ -253,7 +260,8 @@ impl RcTextBuffer {
         let TextBufferInner {
             raw_buffer,
             props,
-            bounds_size: _,
+            bounds_width: _,
+            bounds_height: _,
             has_text,
         } = &mut *inner;
 
