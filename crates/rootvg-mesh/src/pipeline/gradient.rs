@@ -214,14 +214,10 @@ impl GradientMeshPipeline {
                         1 => Uint32x4,
                         // Colors 3-4
                         2 => Uint32x4,
-                        // Colors 5-6
-                        3 => Uint32x4,
-                        // Colors 7-8
-                        4 => Uint32x4,
                         // Offsets
-                        5 => Uint32x4,
+                        3 => Uint32x2,
                         // Direction
-                        6 => Float32x4
+                        4 => Float32x4
                     ),
                 }],
                 compilation_options: PipelineCompilationOptions::default(),

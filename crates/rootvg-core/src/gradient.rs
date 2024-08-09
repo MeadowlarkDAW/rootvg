@@ -9,7 +9,7 @@ use std::f32::consts::FRAC_PI_2;
 use super::color::PackedSrgb;
 use crate::math::{Angle, Point, Rect};
 
-pub const MAX_STOPS: usize = 8;
+pub const MAX_STOPS: usize = 4;
 
 /// A fill which transitions colors progressively along a direction, either linearly, radially (TBD),
 /// or conically (TBD).
@@ -79,7 +79,7 @@ impl LinearGradient {
     pub const fn new(angle: Angle) -> Self {
         Self {
             angle,
-            stops: [None; 8],
+            stops: [None; MAX_STOPS],
         }
     }
 
@@ -125,10 +125,10 @@ impl LinearGradient {
 #[derive(Default, Debug, Copy, Clone, PartialEq, bytemuck::Zeroable, bytemuck::Pod)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PackedGradient {
-    /// 8 colors, each channel = 16 bit float, 2 colors packed into 1 u32
-    pub colors: [[u32; 2]; 8],
-    /// 8 offsets, 8x 16 bit floats packed into 4 u32s
-    pub offsets: [u32; 4],
+    /// 4 colors, each channel = 16 bit float, 2 colors packed into 1 u32
+    pub colors: [[u32; 2]; MAX_STOPS],
+    /// 4 offsets, 4x 16 bit floats packed into 2 u32s
+    pub offsets: [u32; 2],
     /// `[start.x, start.y, end.x, end.y]` in logical points
     pub direction: [f32; 4],
 }
@@ -137,8 +137,8 @@ impl PackedGradient {
     pub fn new(gradient: &Gradient, bounds: Rect) -> Self {
         match gradient {
             Gradient::Linear(linear) => {
-                let mut colors = [[0u32; 2]; 8];
-                let mut offsets = [f16::from(0u8); 8];
+                let mut colors = [[0u32; 2]; MAX_STOPS];
+                let mut offsets = [f16::from(0u8); MAX_STOPS];
 
                 for (index, stop) in linear.stops.iter().enumerate() {
                     let packed_color = stop.map(|s| s.color).unwrap_or(PackedSrgb::default());
@@ -160,8 +160,8 @@ impl PackedGradient {
                 let offsets = [
                     pack_f16s([offsets[0], offsets[1]]),
                     pack_f16s([offsets[2], offsets[3]]),
-                    pack_f16s([offsets[4], offsets[5]]),
-                    pack_f16s([offsets[6], offsets[7]]),
+                    //pack_f16s([offsets[4], offsets[5]]),
+                    //pack_f16s([offsets[6], offsets[7]]),
                 ];
 
                 let (start, end) = to_distance(linear.angle, &bounds);

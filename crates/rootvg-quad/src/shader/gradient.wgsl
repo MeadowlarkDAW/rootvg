@@ -6,30 +6,26 @@ struct GradientVertexInput {
     @builtin(vertex_index) vertex_index: u32,
     @location(0) @interpolate(flat) colors_1: vec4<u32>,
     @location(1) @interpolate(flat) colors_2: vec4<u32>,
-    @location(2) @interpolate(flat) colors_3: vec4<u32>,
-    @location(3) @interpolate(flat) colors_4: vec4<u32>,
-    @location(4) @interpolate(flat) offsets: vec4<u32>,
-    @location(5) direction: vec4<f32>,
-    @location(6) pos: vec2<f32>,
-    @location(7) size: vec2<f32>,
-    @location(8) border_color: vec4<f32>,
-    @location(9) border_radius: vec4<f32>,
-    @location(10) border_width: f32,
+    @location(2) @interpolate(flat) offsets: vec2<u32>,
+    @location(3) direction: vec4<f32>,
+    @location(4) pos: vec2<f32>,
+    @location(5) size: vec2<f32>,
+    @location(6) border_color: vec4<f32>,
+    @location(7) border_radius: vec4<f32>,
+    @location(8) border_width: f32,
 }
 
 struct GradientVertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(1) @interpolate(flat) colors_1: vec4<u32>,
     @location(2) @interpolate(flat) colors_2: vec4<u32>,
-    @location(3) @interpolate(flat) colors_3: vec4<u32>,
-    @location(4) @interpolate(flat) colors_4: vec4<u32>,
-    @location(5) @interpolate(flat) offsets: vec4<u32>,
-    @location(6) direction: vec4<f32>,
-    @location(7) pos: vec2<f32>,
-    @location(8) size: vec2<f32>,
-    @location(9) border_color: vec4<f32>,
-    @location(10) border_radius: vec4<f32>,
-    @location(11) border_width: f32,
+    @location(3) @interpolate(flat) offsets: vec2<u32>,
+    @location(4) direction: vec4<f32>,
+    @location(5) pos: vec2<f32>,
+    @location(6) size: vec2<f32>,
+    @location(7) border_color: vec4<f32>,
+    @location(8) border_radius: vec4<f32>,
+    @location(9) border_width: f32,
 }
 
 @vertex
@@ -54,8 +50,6 @@ fn gradient_vs_main(input: GradientVertexInput) -> GradientVertexOutput {
 
     out.colors_1 = input.colors_1;
     out.colors_2 = input.colors_2;
-    out.colors_3 = input.colors_3;
-    out.colors_4 = input.colors_4;
     out.offsets = input.offsets;
     out.direction = input.direction * globals.scale_factor;
     out.pos = input.pos * globals.scale_factor;
@@ -75,8 +69,8 @@ fn random(coords: vec2<f32>) -> f32 {
 fn gradient(
     raw_position: vec2<f32>,
     direction: vec4<f32>,
-    colors: array<vec4<f32>, 8>,
-    offsets: array<f32, 8>,
+    colors: array<vec4<f32>, 4>,
+    offsets: vec4<f32>,
     last_index: i32
 ) -> vec4<f32> {
     let start = direction.xy;
@@ -122,34 +116,18 @@ fn gradient(
 
 @fragment
 fn gradient_fs_main(input: GradientVertexOutput) -> @location(0) vec4<f32> {
-    let colors = array<vec4<f32>, 8>(
+    let colors = array<vec4<f32>, 4>(
         unpack_u32(input.colors_1.xy),
         unpack_u32(input.colors_1.zw),
         unpack_u32(input.colors_2.xy),
         unpack_u32(input.colors_2.zw),
-        unpack_u32(input.colors_3.xy),
-        unpack_u32(input.colors_3.zw),
-        unpack_u32(input.colors_4.xy),
-        unpack_u32(input.colors_4.zw),
     );
 
-    let offsets_1: vec4<f32> = unpack_u32(input.offsets.xy);
-    let offsets_2: vec4<f32> = unpack_u32(input.offsets.zw);
-
-    var offsets = array<f32, 8>(
-        offsets_1.x,
-        offsets_1.y,
-        offsets_1.z,
-        offsets_1.w,
-        offsets_2.x,
-        offsets_2.y,
-        offsets_2.z,
-        offsets_2.w,
-    );
+    let offsets: vec4<f32> = unpack_u32(input.offsets);
 
     // TODO could just pass this in to the shader but is probably more performant to just check it here
-    var last_index = 7;
-    for (var i: i32 = 0; i <= 7; i++) {
+    var last_index = 3;
+    for (var i: i32 = 0; i <= 3; i++) {
         if (offsets[i] > 1.0) {
             last_index = i - 1;
             break;

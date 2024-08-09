@@ -30,14 +30,19 @@ pub struct Radius {
 }
 
 impl Radius {
-    pub const fn zero() -> Self {
-        Self {
-            top_left: 0.0,
-            top_right: 0.0,
-            bottom_right: 0.0,
-            bottom_left: 0.0,
-        }
-    }
+    pub const ZERO: Self = Self {
+        top_left: 0.0,
+        top_right: 0.0,
+        bottom_right: 0.0,
+        bottom_left: 0.0,
+    };
+
+    pub const CIRCLE: Self = Self {
+        top_left: 1000000.0,
+        top_right: 1000000.0,
+        bottom_right: 1000000.0,
+        bottom_left: 1000000.0,
+    };
 }
 
 impl From<f32> for Radius {

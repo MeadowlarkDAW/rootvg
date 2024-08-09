@@ -69,24 +69,20 @@ impl GradientQuadPipeline {
                         0 => Uint32x4,
                         // Colors 3-4
                         1 => Uint32x4,
-                        // Colors 5-6
-                        2 => Uint32x4,
-                        // Colors 7-8
-                        3 => Uint32x4,
-                        // Offsets 1-8
-                        4 => Uint32x4,
+                        // Offsets 1-4
+                        2 => Uint32x2,
                         // Direction
-                        5 => Float32x4,
+                        3 => Float32x4,
                         // Position
-                        6 => Float32x2,
+                        4 => Float32x2,
                         // Size
-                        7 => Float32x2,
+                        5 => Float32x2,
                         // Border color
-                        8 => Float32x4,
+                        6 => Float32x4,
                         // Border radius
-                        9 => Float32x4,
+                        7 => Float32x4,
                         // Border width
-                        10 => Float32
+                        8 => Float32
                     ),
                 }],
                 compilation_options: PipelineCompilationOptions::default(),
