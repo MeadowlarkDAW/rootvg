@@ -1,6 +1,4 @@
-use rootvg_core::math::ZIndex;
-
-use crate::math::{Point, PointI32, RectI32};
+use crate::math::{RectI32, Vector, VectorI32, ZIndex};
 use crate::primitive_group::{PrimitiveBatchKind, PrimitiveGroup};
 use crate::Primitive;
 
@@ -54,7 +52,7 @@ impl<'a> CanvasCtx<'a> {
         );
     }
 
-    pub fn add_with_offset(&mut self, primitive: impl Into<Primitive>, offset: Point) {
+    pub fn add_with_offset(&mut self, primitive: impl Into<Primitive>, offset: Vector) {
         if self.canvas.scissor_rect_out_of_bounds {
             return;
         }
@@ -100,7 +98,7 @@ impl<'a> CanvasCtx<'a> {
     pub fn add_batch_with_offset(
         &mut self,
         primitives: impl IntoIterator<Item = impl Into<Primitive>>,
-        offset: Point,
+        offset: Vector,
     ) {
         if self.canvas.scissor_rect_out_of_bounds {
             return;
@@ -125,17 +123,17 @@ impl<'a> CanvasCtx<'a> {
     }
 
     pub fn add_group(&mut self, group: &PrimitiveGroup) {
-        self.add_group_with_offset(group, Point::new(0.0, 0.0));
+        self.add_group_with_offset(group, Vector::zero());
     }
 
-    pub fn add_group_with_offset(&mut self, group: &PrimitiveGroup, offset: Point) {
+    pub fn add_group_with_offset(&mut self, group: &PrimitiveGroup, offset: Vector) {
         if self.canvas.scissor_rect_out_of_bounds {
             return;
         }
 
         for batch in group.primitive_batches.iter() {
             let scissor_rect = if let Some(scissor_rect) = batch.scissor_rect {
-                let offset_i32 = PointI32::new(offset.x.round() as i32, offset.y.round() as i32);
+                let offset_i32 = VectorI32::new(offset.x.round() as i32, offset.y.round() as i32);
 
                 let Some(c) = super::offset_scissor_rect(
                     scissor_rect,
@@ -240,7 +238,7 @@ impl<'a> CanvasCtx<'a> {
 
                         custom_batch.push(QueuedCustomPrimitive {
                             id: p.id,
-                            offset: Point::new(p.offset.x + offset.x, p.offset.y + offset.y),
+                            offset: Vector::new(p.offset.x + offset.x, p.offset.y + offset.y),
                         });
                     }
                 }
@@ -316,7 +314,7 @@ fn add(
 
 fn add_with_offset(
     primitive: impl Into<Primitive>,
-    offset: Point,
+    offset: Vector,
     batch_entry: &mut BatchEntry,
     #[cfg(feature = "custom-primitive")] num_custom_pipelines: usize,
 ) {
@@ -392,7 +390,7 @@ fn add_with_offset(
 
             custom_batch.push(QueuedCustomPrimitive {
                 id: p.id,
-                offset: Point::new(p.offset.x + offset.x, p.offset.y + offset.y),
+                offset: Vector::new(p.offset.x + offset.x, p.offset.y + offset.y),
             });
         }
     }

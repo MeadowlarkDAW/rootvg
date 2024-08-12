@@ -13,7 +13,7 @@ use rootvg::gradient::{LinearGradient, PackedGradient};
 use rootvg::image::{ImagePrimitive, RcTexture};
 use rootvg::math::{
     radians, Angle, PhysicalSizeI32, Point, PointI32, Rect, RectI32, Scale, ScaleFactor, Size,
-    SizeI32,
+    SizeI32, Vector,
 };
 use rootvg::msaa::Antialiasing;
 use rootvg::quad::{
@@ -415,7 +415,7 @@ impl ApplicationHandler for DemoApp {
                         SizeI32::new(100, 100),
                     ));
 
-                    cx.add_with_offset(state.primitives.solid_quad, Point::new(0.0, 150.0));
+                    cx.add_with_offset(state.primitives.solid_quad, Vector::new(0.0, 150.0));
 
                     // Calling this will reset the scissoring rectangle to cover the
                     // whole canvas.
@@ -425,15 +425,21 @@ impl ApplicationHandler for DemoApp {
                     //
                     // This can be useful to create a bunch of copies of the same
                     // primitive.
-                    cx.add_with_offset(state.primitives.arc_mesh.clone(), Point::new(100.0, 300.0));
-                    cx.add_with_offset(state.primitives.arc_mesh.clone(), Point::new(200.0, 300.0));
+                    cx.add_with_offset(
+                        state.primitives.arc_mesh.clone(),
+                        Vector::new(100.0, 300.0),
+                    );
+                    cx.add_with_offset(
+                        state.primitives.arc_mesh.clone(),
+                        Vector::new(200.0, 300.0),
+                    );
                     cx.add_with_offset(
                         state.primitives.rect_mesh.clone(),
-                        Point::new(340.0, 325.0),
+                        Vector::new(340.0, 325.0),
                     );
                     cx.add_with_offset(
                         state.primitives.bezier_mesh.clone(),
-                        Point::new(400.0, 300.0),
+                        Vector::new(400.0, 300.0),
                     );
                 }
 

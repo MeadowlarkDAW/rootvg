@@ -1,10 +1,11 @@
-use rootvg_core::math::ZIndex;
 use rootvg_text::glyphon::FontSystem;
 use rustc_hash::FxHashMap;
 
 use crate::color::PackedSrgb;
 use crate::error::RenderError;
-use crate::math::{PhysicalSizeI32, PointI32, RectI32, ScaleFactor, Size, SizeI32};
+use crate::math::{
+    PhysicalSizeI32, PointI32, RectI32, ScaleFactor, Size, SizeI32, VectorI32, ZIndex,
+};
 
 #[cfg(feature = "msaa")]
 use crate::msaa::MsaaPipeline;
@@ -195,7 +196,7 @@ impl Canvas {
     pub fn set_scissor_rect(&mut self, scissor_rect: RectI32) {
         if self.scissor_rect != scissor_rect {
             if let Some(bounded_scissor_rect) =
-                offset_scissor_rect(scissor_rect, PointI32::new(0, 0), self.logical_size_i32)
+                offset_scissor_rect(scissor_rect, VectorI32::new(0, 0), self.logical_size_i32)
             {
                 self.scissor_rect = bounded_scissor_rect;
                 self.scissor_rect_out_of_bounds = false;
@@ -966,7 +967,7 @@ struct CustomBatchBuffer {
     ids: Vec<QueuedCustomPrimitive>,
 }
 
-fn offset_scissor_rect(scissor_rect: RectI32, offset: PointI32, size: SizeI32) -> Option<RectI32> {
+fn offset_scissor_rect(scissor_rect: RectI32, offset: VectorI32, size: SizeI32) -> Option<RectI32> {
     let x = scissor_rect.origin.x + offset.x;
     let y = scissor_rect.origin.y + offset.y;
 

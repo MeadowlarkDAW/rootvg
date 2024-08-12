@@ -31,6 +31,11 @@ pub type Vector = euclid::default::Vector2D<f32>;
 
 /// A vector in units of logical points.
 ///
+/// Alias for ```euclid::default::Vector2D<i32>```.
+pub type VectorI32 = euclid::default::Vector2D<i32>;
+
+/// A vector in units of logical points.
+///
 /// Alias for ```euclid::default::Vector2D<f64>```.
 pub type VectorF64 = euclid::default::Vector2D<f64>;
 

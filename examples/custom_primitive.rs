@@ -4,7 +4,7 @@ mod my_custom_primitive {
     use rootvg::{
         buffer::Buffer,
         color::PackedSrgb,
-        math::Point,
+        math::Vector,
         pipeline::{
             CustomPipeline, CustomPrimitive, DefaultConstantUniforms, PrimitiveID,
             QueuedCustomPrimitive,
@@ -155,7 +155,7 @@ mod my_custom_primitive {
 
             CustomPrimitive {
                 id,
-                offset: Point::default(),
+                offset: Vector::default(),
                 pipeline_index: self.pipeline_index,
             }
         }
@@ -217,7 +217,7 @@ mod my_custom_primitive {
 
             // Apply the offsets given to us.
             for p in primitives.iter() {
-                if p.offset != Point::new(0.0, 0.0) {
+                if p.offset != Vector::zero() {
                     if let Some(entry) = self.primitives.get(&p.id) {
                         vertices[entry.vertex_index as usize].position[0] += p.offset.x;
                         vertices[entry.vertex_index as usize].position[1] += p.offset.y;
@@ -313,7 +313,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use rootvg::math::{PhysicalSizeI32, Point, Rect, ScaleFactor, Size};
+use rootvg::math::{PhysicalSizeI32, Point, Rect, ScaleFactor, Size, Vector};
 use rootvg::quad::{SolidQuad, SolidQuadPrimitive};
 use rootvg::{color::RGBA8, pipeline::CustomPrimitive, surface::DefaultSurface, Canvas};
 
@@ -422,7 +422,7 @@ impl CustomPrimitiveApp {
             position: Point::new(100.0, 100.0).into(),
             size: Size::new(100.0, 100.0).into(),
         });
-        custom_primitive_2.offset = Point::new(100.0, 100.0);
+        custom_primitive_2.offset = Vector::new(100.0, 100.0);
 
         self.state = Some(State {
             window,

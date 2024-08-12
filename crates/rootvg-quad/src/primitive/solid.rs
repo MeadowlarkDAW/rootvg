@@ -94,7 +94,7 @@ impl SolidQuadBuilder {
         self
     }
 
-    pub fn shadow_offset(mut self, offset: Point) -> Self {
+    pub fn shadow_offset(mut self, offset: Vector) -> Self {
         self.quad.shadow.offset = offset;
         self
     }

@@ -1,13 +1,13 @@
 use std::error::Error;
 
-use crate::math::{PhysicalSizeI32, Point, ScaleFactor};
+use crate::math::{PhysicalSizeI32, ScaleFactor, Vector};
 
 pub type PrimitiveID = u32;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CustomPrimitive {
     pub id: PrimitiveID,
-    pub offset: Point,
+    pub offset: Vector,
     pub pipeline_index: u8,
 }
 
@@ -33,7 +33,7 @@ pub trait CustomPipeline {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct QueuedCustomPrimitive {
     pub id: PrimitiveID,
-    pub offset: Point,
+    pub offset: Vector,
 }
 
 /// A default shader uniform struct containing the scale factor and a scaling vector
