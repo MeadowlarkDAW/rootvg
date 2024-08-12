@@ -54,22 +54,22 @@ pub fn multiply_alpha(color: RGBA8, multiplier: f32) -> RGBA8 {
     color.with_alpha(alpha)
 }
 
-/// Returns a color with alpha from a 32-bit hexadecimal value.
-pub const fn hex_a(val: u32) -> RGBA8 {
+/// Returns a color with alpha from a 32-bit hexadecimal color.
+pub const fn hex_a(color: u32) -> RGBA8 {
     RGBA8::new(
-        ((val & 0xff000000) >> 24) as u8,
-        ((val & 0x00ff0000) >> 16) as u8,
-        ((val & 0x0000ff00) >> 8) as u8,
-        (val & 0x000000ff) as u8,
+        ((color & 0xff000000) >> 24) as u8,
+        ((color & 0x00ff0000) >> 16) as u8,
+        ((color & 0x0000ff00) >> 8) as u8,
+        (color & 0x000000ff) as u8,
     )
 }
 
-/// Returns a color from a 24-bit hexadecimal value.
-pub const fn hex(val: u32) -> RGBA8 {
+/// Returns a color from a 24-bit hexadecimal color.
+pub const fn hex(color: u32) -> RGBA8 {
     RGBA8::new(
-        ((val & 0xff0000) >> 16) as u8,
-        ((val & 0x00ff00) >> 8) as u8,
-        (val & 0x0000ff) as u8,
+        ((color & 0xff0000) >> 16) as u8,
+        ((color & 0x00ff00) >> 8) as u8,
+        (color & 0x0000ff) as u8,
         255,
     )
 }
