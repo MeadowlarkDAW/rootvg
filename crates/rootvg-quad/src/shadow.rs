@@ -3,7 +3,7 @@
 // Iced license (MIT): https://github.com/iced-rs/iced/blob/31d1d5fecbef50fa319cabd5d4194f1e4aaefa21/LICENSE
 
 use rootvg_core::color::PackedSrgb;
-use rootvg_core::math::Point;
+use rootvg_core::math::Vector;
 
 /// A shadow.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -13,7 +13,7 @@ pub struct Shadow {
     pub color: PackedSrgb,
 
     /// The offset of the shadow in logical points.
-    pub offset: Point,
+    pub offset: Vector,
 
     /// The blur radius of the shadow in logical points.
     pub blur_radius: f32,

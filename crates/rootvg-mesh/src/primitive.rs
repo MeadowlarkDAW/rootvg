@@ -58,7 +58,7 @@ pub struct MeshUniforms {
 }
 
 impl MeshUniforms {
-    pub fn new(offset: Point, transform: Option<Transform>) -> Self {
+    pub fn new(offset: Vector, transform: Option<Transform>) -> Self {
         let (transform, has_transform) = if let Some(transform) = transform {
             (transform.to_array(), 1)
         } else {
@@ -91,7 +91,7 @@ pub enum MeshPrimitive {
 }
 
 impl MeshPrimitive {
-    pub fn set_offset(&mut self, offset: Point) {
+    pub fn set_offset(&mut self, offset: Vector) {
         match self {
             MeshPrimitive::Solid(mesh) => mesh.uniform.offset = offset.into(),
             #[cfg(feature = "gradient")]

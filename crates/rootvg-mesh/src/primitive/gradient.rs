@@ -54,7 +54,7 @@ impl GradientMeshPrimitive {
         }
     }
 
-    pub fn new_with_offset(mesh: &Rc<GradientMesh>, offset: Point) -> Self {
+    pub fn new_with_offset(mesh: &Rc<GradientMesh>, offset: Vector) -> Self {
         Self {
             mesh: Rc::clone(mesh),
             uniform: MeshUniforms {
@@ -68,7 +68,7 @@ impl GradientMeshPrimitive {
         mesh: &Rc<GradientMesh>,
         angle: Angle,
         rotation_origin: Point,
-        offset: Point,
+        offset: Vector,
     ) -> Self {
         let transform = Transform::translation(-rotation_origin.x, -rotation_origin.y)
             .then_rotate(angle)
@@ -79,7 +79,7 @@ impl GradientMeshPrimitive {
 
     pub fn new_with_transform(
         mesh: &Rc<GradientMesh>,
-        offset: Point,
+        offset: Vector,
         transform: Transform,
     ) -> Self {
         Self {

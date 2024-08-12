@@ -54,7 +54,7 @@ impl SolidMeshPrimitive {
         }
     }
 
-    pub fn new_with_offset(mesh: &Rc<SolidMesh>, offset: Point) -> Self {
+    pub fn new_with_offset(mesh: &Rc<SolidMesh>, offset: Vector) -> Self {
         Self {
             mesh: Rc::clone(mesh),
             uniform: MeshUniforms {
@@ -68,7 +68,7 @@ impl SolidMeshPrimitive {
         mesh: &Rc<SolidMesh>,
         angle: Angle,
         rotation_origin: Point,
-        offset: Point,
+        offset: Vector,
     ) -> Self {
         let transform = Transform::translation(-rotation_origin.x, -rotation_origin.y)
             .then_rotate(angle)
@@ -77,7 +77,7 @@ impl SolidMeshPrimitive {
         Self::new_with_transform(mesh, offset, transform)
     }
 
-    pub fn new_with_transform(mesh: &Rc<SolidMesh>, offset: Point, transform: Transform) -> Self {
+    pub fn new_with_transform(mesh: &Rc<SolidMesh>, offset: Vector, transform: Transform) -> Self {
         Self {
             mesh: Rc::clone(mesh),
             uniform: MeshUniforms::new(offset, Some(transform)),
