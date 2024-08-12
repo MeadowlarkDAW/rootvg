@@ -1,5 +1,3 @@
-use rootvg_mesh::MeshPrimitive;
-use rootvg_text::{svg::SvgIconSystem, ContentType, CustomGlyphDesc, FontSystem};
 use smallvec::smallvec;
 use std::sync::Arc;
 use winit::{
@@ -26,10 +24,12 @@ use rootvg::tessellation::{
 };
 use rootvg::text::{Metrics, RcTextBuffer, TextPrimitive, TextProperties};
 use rootvg::{
-    color::{PackedSrgb, RGBA8},
+    color::{hex, PackedSrgb, RGBA8},
     surface::DefaultSurface,
     Canvas,
 };
+use rootvg_mesh::MeshPrimitive;
+use rootvg_text::{svg::SvgIconSystem, ContentType, CustomGlyphDesc, FontSystem};
 
 const WINDOW_SIZE: (f32, f32) = (800.0, 425.0);
 
@@ -223,7 +223,8 @@ impl DemoApp {
         let svg_icon_primitive = TextPrimitive::new_with_icons(
             None,
             Point::new(180.0, 220.0),
-            RGBA8::new(150, 100, 200, 255),
+            // Convenience method for creating an RGBA8 color
+            hex(0x9664c8),
             Some(Rect::from_size(Size::new(100.0, 100.0))),
             smallvec![CustomGlyphDesc {
                 id: 0,
