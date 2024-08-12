@@ -28,6 +28,26 @@ pub const TRANSPARENT: RGBA8 = RGBA8 {
     a: 0,
 };
 
+/// An alias for `RGBA8::new(r, g, b, a)`
+pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> RGBA8 {
+    RGBA8::new(r, g, b, a)
+}
+
+/// An alias for `RGBA8::new(r, g, b, 255)`
+pub const fn rgb(r: u8, g: u8, b: u8) -> RGBA8 {
+    RGBA8::new(r, g, b, 255)
+}
+
+/// An alias for `RGBA8::new(v, v, v, a)`
+pub const fn gray_a(v: u8, a: u8) -> RGBA8 {
+    RGBA8::new(v, v, v, a)
+}
+
+/// An alias for `RGBA8::new(v, v, v, 255)`
+pub const fn gray(v: u8) -> RGBA8 {
+    RGBA8::new(v, v, v, 255)
+}
+
 /// Returns a color whose alpha is multiplied by the given multiplier.
 pub fn multiply_alpha(color: RGBA8, multiplier: f32) -> RGBA8 {
     let alpha = (f32::from(color.a) * multiplier).round().clamp(0.0, 255.0) as u8;
