@@ -30,6 +30,10 @@ pub struct Radius {
 }
 
 impl Radius {
+    pub const fn new(top_left: f32, top_right: f32, bottom_right: f32, bottom_left: f32) -> Self {
+        Self { top_left, top_right, bottom_right, bottom_left }
+    }
+
     pub const ZERO: Self = Self {
         top_left: 0.0,
         top_right: 0.0,
@@ -87,4 +91,9 @@ impl From<Radius> for [f32; 4] {
             radi.bottom_left,
         ]
     }
+}
+
+/// An alias for `Radius::new(v, v, v, v)`
+pub const fn radius_all_same(v: f32) -> Radius {
+    Radius::new(v, v, v, v)
 }
