@@ -16,6 +16,7 @@ pub enum QuadPrimitive {
 bitflags::bitflags! {
     /// Additional flags for a quad primitive.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct QuadPrimitiveFlags: u32 {
         /// In the shader, snap the left and right edge of the quad to
         /// the nearest physical pixel to preserve perceived sharpness.
