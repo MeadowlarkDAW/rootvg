@@ -6,7 +6,7 @@ use rootvg_core::math::{Point, Rect, Size};
 use crate::border::Border;
 use crate::Radius;
 
-use super::QuadPrimitiveFlags;
+use super::QuadFlags;
 
 /// A quad primitive with a solid background.
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
@@ -18,7 +18,7 @@ pub struct SolidQuad {
     /// The [`Border`] of the quad
     pub border: Border,
     /// Additional flags for a quad primitive.
-    pub flags: QuadPrimitiveFlags,
+    pub flags: QuadFlags,
     /*
     /// The shadow of the quad
     pub shadow: Shadow,
@@ -82,7 +82,7 @@ impl SolidQuadBuilder {
         self
     }
 
-    pub fn flags(mut self, flags: QuadPrimitiveFlags) -> Self {
+    pub fn flags(mut self, flags: QuadFlags) -> Self {
         self.quad.flags = flags;
         self
     }

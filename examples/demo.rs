@@ -1,4 +1,4 @@
-use rootvg_quad::QuadPrimitiveFlags;
+use rootvg_quad::QuadFlags;
 use smallvec::smallvec;
 use std::sync::Arc;
 use winit::{
@@ -409,7 +409,7 @@ impl ApplicationHandler for DemoApp {
                             .bg_color(PackedSrgb::TRANSPARENT)
                             .border_color(RGBA8::new(150, 150, 150, 255))
                             .border_width(1.8)
-                            .flags(QuadPrimitiveFlags::SNAP_ALL_TO_NEAREST_PIXEL)
+                            .flags(QuadFlags::SNAP_ALL_TO_NEAREST_PIXEL)
                             .build(),
                     );
 
