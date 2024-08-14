@@ -3,7 +3,7 @@
 // Iced license (MIT): https://github.com/iced-rs/iced/blob/31d1d5fecbef50fa319cabd5d4194f1e4aaefa21/LICENSE
 
 struct Globals {
-    screen_to_clip_scale: vec2<f32>,
+    screen_size_recip: vec2<f32>,
     scale_factor: f32,
 }
 

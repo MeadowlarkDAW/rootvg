@@ -41,7 +41,9 @@ fn solid_vs_main(input: SolidVertexInput) -> SolidVertexOutput {
         min(input.border_radius.w, min_border_radius)
     );
 
-    var screen_pos: vec2<f32> = input.pos + (vertex_position(input.vertex_index) * input.size);
+    var screen_pos: vec2<f32> =
+        (input.pos + (vertex_position(input.vertex_index) * input.size))
+        * globals.scale_factor;
 
     out.color = input.color;
     out.border_color = input.border_color;
@@ -50,28 +52,22 @@ fn solid_vs_main(input: SolidVertexInput) -> SolidVertexOutput {
     out.border_radius = border_radius * globals.scale_factor;
     out.border_width = input.border_width * globals.scale_factor;
 
+    // Snap edges to nearest physical pixel.
     if (input.flags & 1u) > 0 {
-        // Snap left and right edge to nearest physical pixel.
-        let end_x = round(screen_pos.x + out.size.x);
-        screen_pos.x = round(screen_pos.x);
-        out.size.x = end_x - screen_pos.x;
-        out.pos.x = round(out.pos.x);
+        let snapped_end_pos = round((input.pos + input.size) * globals.scale_factor);
+
+        screen_pos = round(screen_pos);
+        out.pos = round(out.pos);
+        out.size = snapped_end_pos - out.pos;
     }
+    // Snap border width to nearest physical pixel.
     if (input.flags & 2u) > 0 {
-        // Snap top and bottom edge to nearest physical pixel.
-        let end_y = round(screen_pos.y + out.size.y);
-        screen_pos.y = round(screen_pos.y);
-        out.size.y = end_y - screen_pos.y;
-        out.pos.y = round(out.pos.y);
-    }
-    if (input.flags & 4u) > 0 {
-        // Snap border width to nearest physical pixel.
         out.border_width = round(out.border_width);
     }
 
     out.position = vec4<f32>(
-        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
-        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
+        (screen_pos.x * globals.screen_size_recip.x) - 1.0,
+        1.0 - (screen_pos.y * globals.screen_size_recip.y),
         0.0,
         1.0
     );

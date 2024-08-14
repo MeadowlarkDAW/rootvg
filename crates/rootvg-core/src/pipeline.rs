@@ -41,7 +41,8 @@ pub struct QueuedCustomPrimitive {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 pub struct DefaultConstantUniforms {
-    pub screen_to_clip_scale: [f32; 2],
+    /// The reciprical of the screen size.
+    pub screen_size_recip: [f32; 2],
     pub scale_factor: f32,
     pub _padding: f32,
 }
@@ -49,7 +50,10 @@ pub struct DefaultConstantUniforms {
 impl DefaultConstantUniforms {
     pub fn new(screen_size: PhysicalSizeI32, scale_factor: ScaleFactor) -> Self {
         Self {
-            screen_to_clip_scale: crate::math::screen_to_clip_scale(screen_size, scale_factor),
+            screen_size_recip: [
+                2.0 * (screen_size.width as f32).recip(),
+                2.0 * (screen_size.height as f32).recip(),
+            ],
             scale_factor: scale_factor.0,
             _padding: 0.0,
         }

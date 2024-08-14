@@ -406,12 +406,3 @@ impl Div<ScaleFactor> for f32 {
         self / rhs.0
     }
 }
-
-/// Returns a scaling vector that can be used to convert screen coordinates
-/// to clip coordinates in shaders.
-pub fn screen_to_clip_scale(screen_size: PhysicalSizeI32, scale_factor: ScaleFactor) -> [f32; 2] {
-    [
-        2.0 * scale_factor * (screen_size.width as f32).recip(),
-        2.0 * scale_factor * (screen_size.height as f32).recip(),
-    ]
-}

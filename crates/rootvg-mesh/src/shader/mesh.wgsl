@@ -1,5 +1,5 @@
 struct Globals {
-    screen_to_clip_scale: vec2<f32>,
+    screen_size_recip: vec2<f32>,
     scale_factor: f32,
 }
 

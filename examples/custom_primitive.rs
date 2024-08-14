@@ -257,7 +257,7 @@ mod my_custom_primitive {
 
     static SHADER: &'static str = "
 struct Globals {
-    screen_to_clip_scale: vec2f,
+    screen_size_recip: vec2f,
     scale_factor: f32,
 }
 
@@ -282,10 +282,10 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     let x = (f32(1 - i32(input.vertex_index)) + 1.0) / 2.0;
     let y = (f32(i32(input.vertex_index & 1u) * 2 - 1) + 1.0) / 2.0;
 
-    let screen_pos: vec2f = input.pos + (vec2f(x, y) * input.size);
+    let screen_pos: vec2f = (input.pos + (vec2f(x, y) * input.size)) * globals.scale_factor;
     out.clip_position = vec4<f32>(
-        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
-        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
+        (screen_pos.x * globals.screen_size_recip.x) - 1.0,
+        1.0 - (screen_pos.y * globals.screen_size_recip.y),
         0.0,
         1.0
     );

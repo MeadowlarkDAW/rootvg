@@ -1,5 +1,5 @@
 struct Globals {
-    screen_to_clip_scale: vec2<f32>,
+    screen_size_recip: vec2<f32>,
     scale_factor: f32,
 }
 
@@ -33,13 +33,17 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
     var transformed_vertex_pos: vec2<f32> = vertex_pos.xy;
     if input.do_transform != 0 {
-        transformed_vertex_pos = (mat3x2f(input.transform1, input.transform2, input.transform3) * vec3f(vertex_pos, 1.0)).xy;
+        transformed_vertex_pos =
+            (mat3x2f(input.transform1, input.transform2, input.transform3)
+            * vec3f(vertex_pos, 1.0)).xy;
     }
 
-    let screen_pos: vec2<f32> = input.pos + (transformed_vertex_pos * input.size);
+    let screen_pos: vec2<f32> =
+        (input.pos + (transformed_vertex_pos * input.size))
+        * globals.scale_factor;
     out.position = vec4<f32>(
-        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
-        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
+        (screen_pos.x * globals.screen_size_recip.x) - 1.0,
+        1.0 - (screen_pos.y * globals.screen_size_recip.y),
         0.0,
         1.0
     );
