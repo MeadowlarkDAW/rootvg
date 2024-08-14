@@ -13,6 +13,7 @@ struct GradientVertexInput {
     @location(6) border_color: vec4<f32>,
     @location(7) border_radius: vec4<f32>,
     @location(8) border_width: f32,
+    @location(9) flags: u32,
 }
 
 struct GradientVertexOutput {
@@ -40,13 +41,7 @@ fn gradient_vs_main(input: GradientVertexInput) -> GradientVertexOutput {
         min(input.border_radius.w, min_border_radius)
     );
 
-    let screen_pos: vec2<f32> = input.pos + (vertex_position(input.vertex_index) * input.size);
-    out.position = vec4<f32>(
-        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
-        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
-        0.0,
-        1.0
-    );
+    var screen_pos: vec2<f32> = input.pos + (vertex_position(input.vertex_index) * input.size);
 
     out.colors_1 = input.colors_1;
     out.colors_2 = input.colors_2;
@@ -57,6 +52,32 @@ fn gradient_vs_main(input: GradientVertexInput) -> GradientVertexOutput {
     out.border_color = input.border_color;
     out.border_radius = border_radius * globals.scale_factor;
     out.border_width = input.border_width * globals.scale_factor;
+
+    if (input.flags & 1u) > 0 {
+        // Snap left and right edge to nearest physical pixel.
+        let end_x = round(screen_pos.x + out.size.x);
+        screen_pos.x = round(screen_pos.x);
+        out.size.x = end_x - screen_pos.x;
+        out.pos.x = round(out.pos.x);
+    }
+    if (input.flags & 2u) > 0 {
+        // Snap top and bottom edge to nearest physical pixel.
+        let end_y = round(screen_pos.y + out.size.y);
+        screen_pos.y = round(screen_pos.y);
+        out.size.y = end_y - screen_pos.y;
+        out.pos.y = round(out.pos.y);
+    }
+    if (input.flags & 4u) > 0 {
+        // Snap border width to nearest physical pixel.
+        out.border_width = round(out.border_width);
+    }
+
+    out.position = vec4<f32>(
+        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
+        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
+        0.0,
+        1.0
+    );
 
     return out;
 }

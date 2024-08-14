@@ -14,6 +14,7 @@ struct InstanceUniforms {
     transform_5: f32,
     offset: vec2<f32>,
     do_transform: u32,
+    snap_to_nearest_pixel: u32,
 }
 
 @group(0) @binding(0) var<uniform> globals: Globals;

@@ -84,8 +84,12 @@ impl GradientMeshPrimitive {
     ) -> Self {
         Self {
             mesh: Rc::clone(mesh),
-            uniform: MeshUniforms::new(offset, Some(transform)),
+            uniform: MeshUniforms::new(offset, Some(transform), false),
         }
+    }
+
+    pub fn snap_to_nearest_pixel(&mut self, snap: bool) {
+        self.uniform.snap_to_nearest_pixel = if snap { 1 } else { 0 };
     }
 
     /// Contruct a non-rotated rectangle mesh with the given gradient.

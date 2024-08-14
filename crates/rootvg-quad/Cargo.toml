@@ -22,4 +22,5 @@ rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = fal
 wgpu.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
+bitflags.workspace = true
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }

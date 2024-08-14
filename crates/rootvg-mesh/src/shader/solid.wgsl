@@ -28,9 +28,19 @@ fn solid_vs_main(input: SolidVertexInput) -> SolidVertexOutput {
         transformed_pos = (transform * vec3f(input.position, 1.0)).xy;
     }
 
+    var screen_pos = vec2f(
+        transformed_pos.x + instance_uniforms.offset.x,
+        transformed_pos.y + instance_uniforms.offset.y
+    );
+
+    if instance_uniforms.snap_to_nearest_pixel != 0 {
+        screen_pos.x = round(screen_pos.x);
+        screen_pos.y = round(screen_pos.y);
+    }
+
     out.position = vec4<f32>(
-        ((transformed_pos.x + instance_uniforms.offset.x) * globals.screen_to_clip_scale.x) - 1.0,
-        1.0 - ((transformed_pos.y + instance_uniforms.offset.y) * globals.screen_to_clip_scale.y),
+        (screen_pos.x * globals.screen_to_clip_scale.x) - 1.0,
+        1.0 - (screen_pos.y * globals.screen_to_clip_scale.y),
         0.0,
         1.0
     );

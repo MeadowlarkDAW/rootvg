@@ -5,6 +5,8 @@ use rootvg_core::math::{Point, Rect, Size};
 use crate::border::Border;
 use crate::Radius;
 
+use super::QuadPrimitiveFlags;
+
 /// A quad primitive with a gradient background.
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct GradientQuad {
@@ -14,6 +16,8 @@ pub struct GradientQuad {
     pub bg_gradient: Gradient,
     /// The [`Border`] of the quad
     pub border: Border,
+    /// Additional flags for a quad primitive.
+    pub flags: QuadPrimitiveFlags,
     /*
     /// The shadow of the quad
     pub shadow: Shadow,
@@ -22,14 +26,7 @@ pub struct GradientQuad {
 
 impl GradientQuad {
     pub fn packed(&self) -> GradientQuadPrimitive {
-        GradientQuadPrimitive {
-            gradient: self.bg_gradient.packed(self.bounds),
-            position: self.bounds.origin.into(),
-            size: self.bounds.size.into(),
-            border_color: self.border.color,
-            border_radius: self.border.radius.into(),
-            border_width: self.border.width,
-        }
+        GradientQuadPrimitive::new(self)
     }
 
     pub fn builder(size: Size) -> GradientQuadBuilder {
@@ -84,6 +81,11 @@ impl GradientQuadBuilder {
         self
     }
 
+    pub fn flags(mut self, flags: QuadPrimitiveFlags) -> Self {
+        self.quad.flags = flags;
+        self
+    }
+
     /*
     pub fn shadow_color(mut self, color: impl Into<PackedSrgb>) -> Self {
         self.quad.shadow.color = color.into();
@@ -133,6 +135,9 @@ pub struct GradientQuadPrimitive {
 
     /// The border width of the [`Quad`] in logical points.
     pub border_width: f32,
+
+    /// Additional flags for a quad primitive.
+    pub flags: u32,
 }
 
 impl GradientQuadPrimitive {
@@ -144,6 +149,7 @@ impl GradientQuadPrimitive {
             border_color: quad.border.color,
             border_radius: quad.border.radius.into(),
             border_width: quad.border.width,
+            flags: quad.flags.bits(),
         }
     }
 }

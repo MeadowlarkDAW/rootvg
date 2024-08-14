@@ -55,10 +55,16 @@ pub struct MeshUniforms {
     ///
     /// By default this is set to `0` (false).
     pub has_transform: u32,
+
+    /// Whether or not to snap vertices to the nearest physical pixel to preserve
+    /// perceived sharpness.
+    ///
+    /// By default this is set to `0` (false).
+    pub snap_to_nearest_pixel: u32,
 }
 
 impl MeshUniforms {
-    pub fn new(offset: Vector, transform: Option<Transform>) -> Self {
+    pub fn new(offset: Vector, transform: Option<Transform>, snap_to_nearest_pixel: bool) -> Self {
         let (transform, has_transform) = if let Some(transform) = transform {
             (transform.to_array(), 1)
         } else {
@@ -69,6 +75,7 @@ impl MeshUniforms {
             offset: offset.into(),
             transform,
             has_transform,
+            snap_to_nearest_pixel: if snap_to_nearest_pixel { 1 } else { 0 },
         }
     }
 }
@@ -79,6 +86,7 @@ impl Default for MeshUniforms {
             offset: [0.0; 2],
             transform: [0.0; 6],
             has_transform: 0,
+            snap_to_nearest_pixel: 0,
         }
     }
 }
@@ -118,6 +126,14 @@ impl MeshPrimitive {
                 mesh.uniform.transform = transform.to_array();
                 mesh.uniform.has_transform = 1;
             }
+        }
+    }
+
+    pub fn snap_to_nearest_pixel(&mut self, snap: bool) {
+        match self {
+            MeshPrimitive::Solid(mesh) => mesh.snap_to_nearest_pixel(snap),
+            #[cfg(feature = "gradient")]
+            MeshPrimitive::Gradient(mesh) => mesh.snap_to_nearest_pixel(snap),
         }
     }
 }

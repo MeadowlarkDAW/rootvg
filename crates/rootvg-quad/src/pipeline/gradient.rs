@@ -82,7 +82,9 @@ impl GradientQuadPipeline {
                         // Border radius
                         7 => Float32x4,
                         // Border width
-                        8 => Float32
+                        8 => Float32,
+                        // Flags
+                        9 => Uint32,
                     ),
                 }],
                 compilation_options: PipelineCompilationOptions::default(),

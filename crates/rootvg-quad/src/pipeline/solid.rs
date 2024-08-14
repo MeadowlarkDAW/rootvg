@@ -71,13 +71,15 @@ impl SolidQuadPipeline {
                         4 => Float32x4,
                         // Border width
                         5 => Float32,
+                        // Flags
+                        6 => Uint32,
                         /*
                         // Shadow color
-                        6 => Float32x4,
+                        7 => Float32x4,
                         // Shadow offset
-                        7 => Float32x2,
+                        8 => Float32x2,
                         // Shadow blur radius
-                        8 => Float32,
+                        9 => Float32,
                         */
                     ),
                 }],

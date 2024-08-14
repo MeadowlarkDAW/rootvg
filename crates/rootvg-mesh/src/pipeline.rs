@@ -33,7 +33,7 @@ struct InstanceUniforms {
     /// see: [`wgpu::Limits`] `min_uniform_buffer_offset_alignment`.
     _padding1: [f32; 32],
     /// Bytemuck doesn't derive for arrays of size 55, so split it up.
-    _padding2: [f32; 23],
+    _padding2: [f32; 22],
 }
 
 impl InstanceUniforms {
@@ -42,7 +42,7 @@ impl InstanceUniforms {
         //
         // Neither the rust code nor the shader code reads these padding bytes.
         #[allow(invalid_value, clippy::uninit_assumed_init)]
-        let (_padding1, _padding2): ([f32; 32], [f32; 23]) = unsafe {
+        let (_padding1, _padding2): ([f32; 32], [f32; 22]) = unsafe {
             (
                 std::mem::MaybeUninit::uninit().assume_init(),
                 std::mem::MaybeUninit::uninit().assume_init(),

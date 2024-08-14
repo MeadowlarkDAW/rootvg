@@ -1,3 +1,4 @@
+use rootvg_quad::QuadPrimitiveFlags;
 use smallvec::smallvec;
 use std::sync::Arc;
 use winit::{
@@ -164,6 +165,7 @@ impl DemoApp {
                 // A large radius turns this quad into a circle.
                 radius: 50.0.into(),
             },
+            flags: Default::default(),
         }
         .into();
 
@@ -403,10 +405,11 @@ impl ApplicationHandler for DemoApp {
                     // efficient, but is more convenient.
                     cx.add(
                         SolidQuad::builder(Size::new(50.0, 60.0))
-                            .position(Point::new(163.0, 100.0))
+                            .position(Point::new(163.5, 100.5))
                             .bg_color(PackedSrgb::TRANSPARENT)
                             .border_color(RGBA8::new(150, 150, 150, 255))
-                            .border_width(2.0)
+                            .border_width(1.8)
+                            .flags(QuadPrimitiveFlags::SNAP_ALL_TO_NEAREST_PIXEL)
                             .build(),
                     );
 
