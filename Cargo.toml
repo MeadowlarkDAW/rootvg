@@ -39,7 +39,7 @@ keywords = ["vector", "graphics", "gpu", "2d"]
 all-features = true
 
 [features]
-default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "svg-icons", "default-surface"]
+default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "svg-icons", "default-surface", "web-colors"]
 ## Enables drawing meshes of triangles
 mesh = ["dep:rootvg-mesh"]
 ## Enables anti-aliasing using MSAA. This only effects mesh primitives, so consider
@@ -71,6 +71,19 @@ serde = [
     "rootvg-quad?/serde",
     "rootvg-tessellation?/serde",
     "rootvg-text?/serde",
+]
+# Enables broken "sRGB linear" blending to reproduce color management of the Web.
+# Recommended for better text legibility.
+# See: https://github.com/iced-rs/iced/pull/1888
+#      https://github.com/pop-os/cosmic-text/issues/195
+web-colors = [
+    "rootvg-core/web-colors",
+    "rootvg-image?/web-colors",
+    "rootvg-mesh?/web-colors",
+    "rootvg-msaa?/web-colors",
+    "rootvg-quad?/web-colors",
+    "rootvg-tessellation?/web-colors",
+    "rootvg-text?/web-colors",
 ]
 
 [dependencies]

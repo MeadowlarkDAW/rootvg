@@ -30,7 +30,7 @@ pub struct Fill {
 impl Default for Fill {
     fn default() -> Self {
         Self {
-            style: FillStyle::Solid(PackedSrgb([0.0, 0.0, 0.0, 1.0])),
+            style: FillStyle::Solid(PackedSrgb::BLACK),
             rule: FillRule::NonZero,
         }
     }

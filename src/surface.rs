@@ -250,10 +250,12 @@ impl<'a> DefaultSurface<'a> {
             log::trace!("available texture formats: {formats:#?}");
 
             // Gamma correction
+            #[cfg(not(feature = "web-colors"))]
             let format = formats.find(wgpu::TextureFormat::is_srgb);
 
             // No gamma correction
-            // let format = formats.find(|format| !wgpu::TextureFormat::is_srgb(format));
+            #[cfg(feature = "web-colors")]
+            let format = formats.find(|format| !wgpu::TextureFormat::is_srgb(format));
 
             let format = format.or_else(|| {
                 log::warn!("no texture format found!");

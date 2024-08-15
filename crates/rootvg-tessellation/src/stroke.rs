@@ -52,7 +52,7 @@ impl<'a> Stroke<'a> {
 impl<'a> Default for Stroke<'a> {
     fn default() -> Self {
         Stroke {
-            style: FillStyle::Solid(PackedSrgb([0.0, 0.0, 0.0, 1.0])),
+            style: FillStyle::Solid(PackedSrgb::BLACK),
             width: 1.0,
             line_cap: LineCap::default(),
             line_join: LineJoin::default(),

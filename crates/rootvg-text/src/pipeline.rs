@@ -37,8 +37,17 @@ impl TextPipeline {
         let swash_cache = SwashCache::new();
         let cache = Cache::new(device);
         let viewport = Viewport::new(device, &cache);
-        let atlas =
-            TextAtlas::with_color_mode(device, queue, &cache, format, glyphon::ColorMode::Accurate);
+        let atlas = TextAtlas::with_color_mode(
+            device,
+            queue,
+            &cache,
+            format,
+            if rootvg_core::color::GAMMA_CORRECTION {
+                glyphon::ColorMode::Accurate
+            } else {
+                glyphon::ColorMode::Web
+            },
+        );
 
         let empty_text_buffer =
             RcTextBuffer::new("", Default::default(), None, None, false, font_system);

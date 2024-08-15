@@ -13,10 +13,15 @@ keywords.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["svg-icons"]
+default = ["svg-icons", "web-colors"]
 serde = ["rootvg-core/serde"]
 svg-icons = ["dep:resvg", "glyphon/custom-glyphs"]
 svg-icon-raster-images = ["svg-icons", "resvg/raster-images"]
+# Enables broken "sRGB linear" blending to reproduce color management of the Web.
+# Recommended for better text legibility.
+# See: https://github.com/iced-rs/iced/pull/1888
+#      https://github.com/pop-os/cosmic-text/issues/195
+web-colors = ["rootvg-core/web-colors"]
 
 [dependencies]
 rootvg-core = { version = "0.3", path = "../rootvg-core", default-features = false }
@@ -26,4 +31,4 @@ bytemuck.workspace = true
 smallvec.workspace = true
 rustc-hash.workspace = true
 glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "4f19f0f4deed1274e08c13e1f03901bd88fa7eae" }
-resvg = { version = "0.42", default-features = false, optional = true }
+resvg = { version = "0.43", default-features = false, optional = true }
