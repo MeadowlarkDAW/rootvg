@@ -88,12 +88,12 @@ web-colors = [
 
 [dependencies]
 rootvg-core = { version = "0.3", path = "crates/rootvg-core", default-features = false }
-rootvg-image = { version = "0.3", path = "crates/rootvg-image", optional = true }
+rootvg-image = { version = "0.3", path = "crates/rootvg-image", default-features = false, optional = true }
 rootvg-mesh = { version = "0.3", path = "crates/rootvg-mesh", default-features = false, optional = true }
-rootvg-msaa = { version = "0.3", path = "crates/rootvg-msaa", optional = true }
+rootvg-msaa = { version = "0.3", path = "crates/rootvg-msaa", default-features = false, optional = true }
 rootvg-quad = { version = "0.3", path = "crates/rootvg-quad", default-features = false, optional = true }
 rootvg-tessellation = { version = "0.3", path = "crates/rootvg-tessellation", default-features = false, optional = true }
-rootvg-text = { version = "0.3", path = "crates/rootvg-text", optional = true }
+rootvg-text = { version = "0.3", path = "crates/rootvg-text", default-features = false, optional = true }
 pollster = { version = "0.3.0", optional = true }
 rustc-hash.workspace = true
 log.workspace = true
