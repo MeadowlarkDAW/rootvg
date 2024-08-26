@@ -28,5 +28,6 @@ rgb.workspace = true
 log.workspace = true
 euclid.workspace = true
 bytemuck.workspace = true
+thunderdome.workspace = true
 half = { workspace = true, optional = true }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }

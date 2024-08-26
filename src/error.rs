@@ -9,6 +9,10 @@ pub enum RenderError {
     GlyphonRenderError(#[from] crate::text::glyphon::RenderError),
 
     #[cfg(feature = "custom-primitive")]
+    #[error("custom pipeline with ID {0:?} does not exist")]
+    InvalidCustomPipelineID(rootvg_core::pipeline::CustomPipelineID),
+
+    #[cfg(feature = "custom-primitive")]
     #[error("custom pipeline prepare error: {0}")]
     CustomPipelinePrepareError(Box<dyn std::error::Error>),
 

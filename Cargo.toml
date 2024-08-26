@@ -39,11 +39,23 @@ keywords = ["vector", "graphics", "gpu", "2d"]
 all-features = true
 
 [features]
-default = ["quad", "mesh", "tessellation", "text", "image", "msaa", "gradient", "svg-icons", "default-surface", "web-colors"]
+default = [
+    "quad",
+    "mesh",
+    "tessellation",
+    "text",
+    "image",
+    "msaa",
+    "gradient",
+    "svg-icons",
+    "default-surface",
+    "web-colors",
+]
 ## Enables drawing meshes of triangles
 mesh = ["dep:rootvg-mesh"]
-## Enables anti-aliasing using MSAA. This only effects mesh primitives, so consider
-## disabling this if the `mesh` and `tessellation` features are disabled.
+## Enables anti-aliasing using MSAA. This only effects mesh primitives and
+## custom primitives, so consider disabling this if the `mesh`,`tessellation`,
+## and "custom-primitive" features are disabled.
 msaa = ["dep:rootvg-msaa"]
 ## Enables drawing of quads
 quad = ["dep:rootvg-quad"]
@@ -100,6 +112,7 @@ log.workspace = true
 smallvec.workspace = true
 thiserror.workspace = true
 wgpu.workspace = true
+thunderdome.workspace = true
 
 [dev-dependencies]
 winit.workspace = true
@@ -123,6 +136,7 @@ env_logger = "0.11.3"
 thiserror = "1.0.57"
 half = "2.3.1"
 bitflags = "2.6"
+thunderdome = "0.6.1"
 
 [[example]]
 name = "custom_primitive"

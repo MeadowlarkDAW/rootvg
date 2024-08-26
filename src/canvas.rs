@@ -1,4 +1,3 @@
-use rootvg_text::glyphon::FontSystem;
 use rustc_hash::FxHashMap;
 
 use crate::color::PackedSrgb;
@@ -35,7 +34,7 @@ use crate::quad::{
 #[cfg(feature = "text")]
 use crate::text::{
     pipeline::{TextBatchBuffer, TextPipeline},
-    TextPrimitive,
+    FontSystem, TextPrimitive,
 };
 
 #[cfg(all(feature = "text", feature = "svg-icons"))]
@@ -48,17 +47,23 @@ use rootvg_image::{
 };
 
 #[cfg(feature = "custom-primitive")]
-use rootvg_core::pipeline::{CustomPipeline, QueuedCustomPrimitive};
+use rootvg_core::pipeline::{
+    CustomPipeline, CustomPipelineID, CustomPipelinePrimitive, CustomPrimitive,
+};
 
 mod context;
 
 pub use context::CanvasCtx;
 
+#[cfg(feature = "custom-primitive")]
+struct CustomPipelineEntry {
+    pipeline: Box<dyn CustomPipeline>,
+    primitives_to_prepare: Vec<CustomPipelinePrimitive>,
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasConfig {
     pub multisample: wgpu::MultisampleState,
-    #[cfg(feature = "custom-primitive")]
-    pub num_custom_pipelines: usize,
 }
 
 pub struct Canvas {
@@ -84,6 +89,9 @@ pub struct Canvas {
     #[cfg(feature = "msaa")]
     msaa_pipeline: Option<MsaaPipeline>,
 
+    #[cfg(feature = "custom-primitive")]
+    custom_pipelines: thunderdome::Arena<CustomPipelineEntry>,
+
     output: CanvasOutput,
     physical_size: PhysicalSizeI32,
     logical_size: Size,
@@ -97,9 +105,6 @@ pub struct Canvas {
     needs_preparing: bool,
 
     pub(crate) z_index: ZIndex,
-
-    #[cfg(feature = "custom-primitive")]
-    num_custom_pipelines: usize,
 }
 
 impl Canvas {
@@ -111,11 +116,7 @@ impl Canvas {
         config: CanvasConfig,
         #[cfg(feature = "text")] font_system: &mut FontSystem,
     ) -> Self {
-        let CanvasConfig {
-            multisample,
-            #[cfg(feature = "custom-primitive")]
-            num_custom_pipelines,
-        } = config;
+        let CanvasConfig { multisample } = config;
 
         Self {
             batches: FxHashMap::default(),
@@ -144,10 +145,10 @@ impl Canvas {
                 None
             },
 
-            output: CanvasOutput::new(
-                #[cfg(feature = "custom-primitive")]
-                num_custom_pipelines,
-            ),
+            #[cfg(feature = "custom-primitive")]
+            custom_pipelines: thunderdome::Arena::new(),
+
+            output: CanvasOutput::new(),
             physical_size: PhysicalSizeI32::default(),
             logical_size: Size::default(),
             logical_size_i32: SizeI32::default(),
@@ -157,9 +158,6 @@ impl Canvas {
             scissor_rect_out_of_bounds: true,
             needs_preparing: false,
             z_index: 0,
-
-            #[cfg(feature = "custom-primitive")]
-            num_custom_pipelines,
         }
     }
 
@@ -212,6 +210,42 @@ impl Canvas {
         self.scissor_rect_out_of_bounds = false;
     }
 
+    #[cfg(feature = "custom-primitive")]
+    pub fn insert_custom_pipeline(
+        &mut self,
+        pipeline: impl CustomPipeline + 'static,
+    ) -> CustomPipelineID {
+        CustomPipelineID(self.custom_pipelines.insert(CustomPipelineEntry {
+            pipeline: Box::new(pipeline),
+            primitives_to_prepare: Vec::new(),
+        }))
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn custom_pipeline(&self, id: CustomPipelineID) -> Option<&Box<dyn CustomPipeline>> {
+        self.custom_pipelines.get(id.0).map(|entry| &entry.pipeline)
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn custom_pipeline_mut(
+        &mut self,
+        id: CustomPipelineID,
+    ) -> Option<&mut Box<dyn CustomPipeline>> {
+        self.custom_pipelines
+            .get_mut(id.0)
+            .map(|entry| &mut entry.pipeline)
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn remove_custom_pipeline(
+        &mut self,
+        id: CustomPipelineID,
+    ) -> Option<Box<dyn CustomPipeline>> {
+        self.custom_pipelines
+            .remove(id.0)
+            .map(|entry| entry.pipeline)
+    }
+
     pub fn render_to_target(
         &mut self,
         clear_color: Option<PackedSrgb>,
@@ -220,20 +254,14 @@ impl Canvas {
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         target_size: PhysicalSizeI32,
-        #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
         #[cfg(all(feature = "text", feature = "svg-icons"))] svg_icon_system: &mut SvgIconSystem,
     ) -> Result<(), RenderError> {
         assert_eq!(target_size, self.physical_size);
 
-        #[cfg(feature = "custom-primitive")]
-        assert_eq!(custom_pipelines.len(), self.num_custom_pipelines);
-
         self.prepare(
             device,
             queue,
-            #[cfg(feature = "custom-primitive")]
-            custom_pipelines,
             #[cfg(feature = "text")]
             font_system,
             #[cfg(all(feature = "text", feature = "svg-icons"))]
@@ -299,12 +327,7 @@ impl Canvas {
                 occlusion_query_set: None,
             });
 
-            self.render(
-                &mut render_pass,
-                #[cfg(feature = "custom-primitive")]
-                custom_pipelines,
-            )
-            .unwrap();
+            self.render(&mut render_pass).unwrap();
         }
 
         #[cfg(feature = "msaa")]
@@ -327,24 +350,10 @@ impl Canvas {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        #[cfg(feature = "custom-primitive")] custom_pipelines: &mut [&mut dyn CustomPipeline],
         #[cfg(feature = "text")] font_system: &mut FontSystem,
         #[cfg(all(feature = "text", feature = "svg-icons"))] svg_icon_system: &mut SvgIconSystem,
     ) -> Result<(), RenderError> {
-        #[cfg(feature = "custom-primitive")]
-        let mut custom_needs_preparing = false;
-        #[cfg(feature = "custom-primitive")]
-        for pipeline in custom_pipelines.iter() {
-            if pipeline.needs_preparing() {
-                custom_needs_preparing = true;
-                break;
-            }
-        }
-
-        #[cfg(not(feature = "custom-primitive"))]
-        let custom_needs_preparing = false;
-
-        if !self.needs_preparing && !custom_needs_preparing {
+        if !self.needs_preparing {
             return Ok(());
         }
         self.needs_preparing = false;
@@ -391,6 +400,11 @@ impl Canvas {
             self.scale_factor,
         );
 
+        #[cfg(feature = "custom-primitive")]
+        for (_, entry) in self.custom_pipelines.iter_mut() {
+            entry.primitives_to_prepare.clear();
+        }
+
         self.output.order.clear();
 
         // Sort the keys by z index
@@ -417,9 +431,7 @@ impl Canvas {
         let mut num_image_batches = 0;
 
         #[cfg(feature = "custom-primitive")]
-        let mut num_custom_batches = vec![0; custom_pipelines.len()];
-        #[cfg(feature = "custom-primitive")]
-        let mut queued_custom_primitives = vec![Vec::new(); custom_pipelines.len()];
+        let mut num_custom_batches = 0;
 
         for key in self.temp_keys_for_sorting.iter() {
             let Some(batch_entry) = self.batches.get(key) else {
@@ -571,40 +583,55 @@ impl Canvas {
 
             #[cfg(feature = "custom-primitive")]
             if !batch_entry.custom_primitives.is_empty() {
-                for i in 0..self.num_custom_pipelines {
-                    if num_custom_batches[i] == self.output.custom_batches[i].len() {
-                        self.output.custom_batches[i].push(CustomBatchBuffer { ids: Vec::new() });
+                for custom_primitive in batch_entry.custom_primitives.iter() {
+                    let Some(pipeline) = self
+                        .custom_pipelines
+                        .get_mut(custom_primitive.pipeline_id.0)
+                    else {
+                        return Err(RenderError::InvalidCustomPipelineID(
+                            custom_primitive.pipeline_id,
+                        ));
+                    };
+
+                    if num_custom_batches == self.output.custom_batches.len() {
+                        self.output.custom_batches.push(CustomBatchBuffer {
+                            primitive_index: pipeline.primitives_to_prepare.len(),
+                        });
+                    } else {
+                        self.output.custom_batches[num_custom_batches].primitive_index =
+                            pipeline.primitives_to_prepare.len();
                     }
 
-                    self.output.custom_batches[i][num_custom_batches[i]]
-                        .ids
-                        .clear();
-                    self.output.custom_batches[i][num_custom_batches[i]]
-                        .ids
-                        .extend_from_slice(&batch_entry.custom_primitives[i]);
+                    pipeline
+                        .primitives_to_prepare
+                        .push(CustomPipelinePrimitive {
+                            primitive: std::rc::Rc::clone(&custom_primitive.primitive),
+                            offset: custom_primitive.offset,
+                        });
 
                     self.output.order.push(BatchKind::Custom {
-                        pipeline_index: i,
-                        batch_index: num_custom_batches[i],
+                        pipeline_id: custom_primitive.pipeline_id,
+                        batch_index: num_custom_batches,
                     });
 
-                    queued_custom_primitives[i]
-                        .extend_from_slice(&batch_entry.custom_primitives[i]);
-
-                    num_custom_batches[i] += 1;
+                    num_custom_batches += 1;
                 }
             }
         }
 
         // Prepare custom pipelines
         #[cfg(feature = "custom-primitive")]
-        for i in 0..self.num_custom_pipelines {
-            if let Err(e) = custom_pipelines[i].prepare(
+        for (_, entry) in self.custom_pipelines.iter_mut() {
+            if entry.primitives_to_prepare.is_empty() {
+                continue;
+            }
+
+            if let Err(e) = entry.pipeline.prepare(
                 device,
                 queue,
                 self.physical_size,
                 self.scale_factor,
-                &queued_custom_primitives[i],
+                &entry.primitives_to_prepare,
             ) {
                 return Err(RenderError::CustomPipelinePrepareError(e));
             }
@@ -667,12 +694,12 @@ impl Canvas {
         }
 
         #[cfg(feature = "custom-primitive")]
-        for i in 0..self.num_custom_pipelines {
-            if num_custom_batches[i] < self.output.custom_batches[i].len() {
-                self.output.custom_batches[i].resize_with(num_custom_batches[i], || {
-                    CustomBatchBuffer { ids: Vec::new() }
+        if num_custom_batches < self.output.custom_batches.len() {
+            self.output
+                .custom_batches
+                .resize_with(num_custom_batches, || CustomBatchBuffer {
+                    primitive_index: 0,
                 });
-            }
         }
 
         Ok(())
@@ -681,8 +708,6 @@ impl Canvas {
     fn render<'pass>(
         &'pass mut self,
         render_pass: &mut wgpu::RenderPass<'pass>,
-        #[cfg(feature = "custom-primitive")]
-        custom_pipelines: &'pass mut [&mut dyn CustomPipeline],
     ) -> Result<(), RenderError> {
         let mut scissor_rect_in_bounds = true;
 
@@ -749,14 +774,16 @@ impl Canvas {
                 #[cfg(feature = "custom-primitive")]
                 BatchKind::Custom {
                     batch_index,
-                    pipeline_index,
+                    pipeline_id,
                 } => {
                     if !scissor_rect_in_bounds {
                         continue;
                     }
 
-                    if let Err(e) = custom_pipelines[*pipeline_index].render_primitives(
-                        &self.output.custom_batches[*pipeline_index][*batch_index].ids,
+                    let entry = self.custom_pipelines.get(pipeline_id.0).unwrap();
+
+                    if let Err(e) = entry.pipeline.render_primitive(
+                        self.output.custom_batches[*batch_index].primitive_index,
                         render_pass,
                     ) {
                         return Err(RenderError::CustomPipelineRenderError(e));
@@ -845,7 +872,7 @@ struct BatchEntry {
     images: Vec<ImagePrimitive>,
 
     #[cfg(feature = "custom-primitive")]
-    custom_primitives: Vec<Vec<QueuedCustomPrimitive>>,
+    custom_primitives: Vec<CustomPrimitive>,
 }
 
 impl BatchEntry {
@@ -891,13 +918,13 @@ struct CanvasOutput {
     image_batches: Vec<ImageBatchBuffer>,
 
     #[cfg(feature = "custom-primitive")]
-    custom_batches: Vec<Vec<CustomBatchBuffer>>,
+    custom_batches: Vec<CustomBatchBuffer>,
 
     order: Vec<BatchKind>,
 }
 
 impl CanvasOutput {
-    fn new(#[cfg(feature = "custom-primitive")] num_custom_pipelines: usize) -> Self {
+    fn new() -> Self {
         Self {
             #[cfg(any(feature = "mesh", feature = "tessellation"))]
             solid_mesh_batches: Vec::new(),
@@ -916,7 +943,7 @@ impl CanvasOutput {
             image_batches: Vec::new(),
 
             #[cfg(feature = "custom-primitive")]
-            custom_batches: vec![Vec::new(); num_custom_pipelines],
+            custom_batches: Vec::new(),
 
             order: Vec::new(),
         }
@@ -954,7 +981,7 @@ enum BatchKind {
 
     #[cfg(feature = "custom-primitive")]
     Custom {
-        pipeline_index: usize,
+        pipeline_id: CustomPipelineID,
         batch_index: usize,
     },
 
@@ -964,7 +991,7 @@ enum BatchKind {
 #[cfg(feature = "custom-primitive")]
 #[derive(Clone)]
 struct CustomBatchBuffer {
-    ids: Vec<QueuedCustomPrimitive>,
+    primitive_index: usize,
 }
 
 fn offset_scissor_rect(scissor_rect: RectI32, offset: VectorI32, size: SizeI32) -> Option<RectI32> {

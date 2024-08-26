@@ -1,39 +1,78 @@
+use std::any::Any;
 use std::error::Error;
+use std::rc::Rc;
 
 use crate::math::{PhysicalSizeI32, ScaleFactor, Vector};
 
 pub type PrimitiveID = u32;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CustomPipelineID(pub thunderdome::Index);
+
+#[derive(Debug, Clone)]
 pub struct CustomPrimitive {
-    pub id: PrimitiveID,
+    pub primitive: Rc<dyn Any>,
     pub offset: Vector,
-    pub pipeline_index: u8,
+    pub pipeline_id: CustomPipelineID,
 }
 
-pub trait CustomPipeline {
-    fn needs_preparing(&self) -> bool;
+impl CustomPrimitive {
+    pub fn new(primitive: impl Any, pipeline_id: CustomPipelineID) -> Self {
+        Self {
+            primitive: Rc::new(primitive),
+            offset: Vector::default(),
+            pipeline_id,
+        }
+    }
 
+    pub fn new_with_offset(
+        primitive: impl Any,
+        offset: Vector,
+        pipeline_id: CustomPipelineID,
+    ) -> Self {
+        Self {
+            primitive: Rc::new(primitive),
+            offset,
+            pipeline_id,
+        }
+    }
+}
+
+impl PartialEq for CustomPrimitive {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.primitive, &other.primitive)
+            && self.offset == other.offset
+            && self.pipeline_id == other.pipeline_id
+    }
+}
+
+pub trait CustomPipeline: Any {
     fn prepare(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         screen_size: PhysicalSizeI32,
         scale_factor: ScaleFactor,
-        primitives: &[QueuedCustomPrimitive],
+        primitives: &[CustomPipelinePrimitive],
     ) -> Result<(), Box<dyn Error>>;
 
-    fn render_primitives<'pass>(
+    fn render_primitive<'pass>(
         &'pass self,
-        primitives: &[QueuedCustomPrimitive],
+        primitive_index: usize,
         render_pass: &mut wgpu::RenderPass<'pass>,
     ) -> Result<(), Box<dyn Error>>;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct QueuedCustomPrimitive {
-    pub id: PrimitiveID,
+#[derive(Debug, Clone)]
+pub struct CustomPipelinePrimitive {
+    pub primitive: Rc<dyn Any>,
     pub offset: Vector,
+}
+
+impl PartialEq for CustomPipelinePrimitive {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.primitive, &other.primitive) && self.offset == other.offset
+    }
 }
 
 /// A default shader uniform struct containing the scale factor and a scaling vector

@@ -3,14 +3,10 @@ mod my_custom_primitive {
     use bytemuck::{Pod, Zeroable};
     use rootvg::{
         buffer::Buffer,
-        color::PackedSrgb,
-        math::Vector,
-        pipeline::{
-            CustomPipeline, CustomPrimitive, DefaultConstantUniforms, PrimitiveID,
-            QueuedCustomPrimitive,
-        },
+        color::{PackedSrgb, RGBA8},
+        math::{Point, Size},
+        pipeline::{CustomPipeline, CustomPipelinePrimitive, DefaultConstantUniforms},
     };
-    use rustc_hash::FxHashMap;
     use wgpu::PipelineCompilationOptions;
 
     const INITIAL_INSTANCES: usize = 8;
@@ -23,30 +19,28 @@ mod my_custom_primitive {
         pub size: [f32; 2],
     }
 
-    struct Entry {
-        primitive: MyCustomPrimitive,
-        vertex_index: u32,
+    impl MyCustomPrimitive {
+        pub fn new(color: RGBA8, position: Point, size: Size) -> Self {
+            Self {
+                color: color.into(),
+                position: position.into(),
+                size: size.into(),
+            }
+        }
     }
 
     pub struct MyCustomPrimitivePipeline {
         pipeline: wgpu::RenderPipeline,
-        pipeline_index: u8,
 
         constants_buffer: wgpu::Buffer,
         constants_bind_group: wgpu::BindGroup,
 
         vertex_buffer: Buffer<MyCustomPrimitive>,
         num_vertices: usize,
-
-        primitives: FxHashMap<PrimitiveID, Entry>,
-        next_primitive_id: PrimitiveID,
-
-        needs_preparing: bool,
     }
 
     impl MyCustomPrimitivePipeline {
         pub fn new(
-            pipeline_index: u8,
             device: &wgpu::Device,
             format: wgpu::TextureFormat,
             multisample: wgpu::MultisampleState,
@@ -126,81 +120,22 @@ mod my_custom_primitive {
 
             Self {
                 pipeline,
-                pipeline_index,
                 constants_buffer,
                 constants_bind_group,
                 vertex_buffer,
-                primitives: FxHashMap::default(),
-                needs_preparing: false,
-                next_primitive_id: PrimitiveID::default(),
                 num_vertices: 0,
-            }
-        }
-
-        pub fn add_primitive(&mut self, primitive: MyCustomPrimitive) -> CustomPrimitive {
-            self.needs_preparing = true;
-
-            // Generate a new ID for the primitive.
-            let id = self.next_primitive_id;
-            self.next_primitive_id += 1;
-
-            self.primitives.insert(
-                id,
-                Entry {
-                    primitive,
-                    // This will be overwritten in `prepare`.
-                    vertex_index: 0,
-                },
-            );
-
-            CustomPrimitive {
-                id,
-                offset: Vector::default(),
-                pipeline_index: self.pipeline_index,
-            }
-        }
-
-        #[allow(dead_code)]
-        pub fn set_primitive(
-            &mut self,
-            id: PrimitiveID,
-            new_data: MyCustomPrimitive,
-        ) -> Result<(), ()> {
-            if let Some(entry) = self.primitives.get_mut(&id) {
-                entry.primitive = new_data;
-                self.needs_preparing = true;
-
-                Ok(())
-            } else {
-                Err(())
-            }
-        }
-
-        #[allow(dead_code)]
-        pub fn remove_primitive(&mut self, primitive: CustomPrimitive) {
-            // Sanity check. We could return or log an error instead.
-            if primitive.pipeline_index != self.pipeline_index {
-                return;
-            }
-
-            if let Some(_) = self.primitives.remove(&primitive.id) {
-                self.needs_preparing = true;
             }
         }
     }
 
     impl CustomPipeline for MyCustomPrimitivePipeline {
-        fn needs_preparing(&self) -> bool {
-            self.needs_preparing
-        }
-
         fn prepare(
             &mut self,
             device: &wgpu::Device,
             queue: &wgpu::Queue,
             screen_size: rootvg::math::PhysicalSizeI32,
             scale_factor: rootvg::math::ScaleFactor,
-            primitives: &[QueuedCustomPrimitive],
+            primitives: &[CustomPipelinePrimitive],
         ) -> Result<(), Box<dyn std::error::Error>> {
             DefaultConstantUniforms::prepare_buffer(
                 &self.constants_buffer,
@@ -209,47 +144,42 @@ mod my_custom_primitive {
                 queue,
             );
 
-            let mut vertices: Vec<MyCustomPrimitive> = Vec::new();
-            for (i, entry) in self.primitives.values_mut().enumerate() {
-                vertices.push(entry.primitive);
-                entry.vertex_index = i as u32;
-            }
+            let vertices: Vec<MyCustomPrimitive> = primitives
+                .iter()
+                .map(|p| {
+                    let mut primitive = *p.primitive.downcast_ref::<MyCustomPrimitive>().unwrap();
 
-            // Apply the offsets given to us.
-            for p in primitives.iter() {
-                if p.offset != Vector::zero() {
-                    if let Some(entry) = self.primitives.get(&p.id) {
-                        vertices[entry.vertex_index as usize].position[0] += p.offset.x;
-                        vertices[entry.vertex_index as usize].position[1] += p.offset.y;
-                    }
-                }
-            }
+                    // Offset the primitive by the requested amount
+                    primitive.position[0] += p.offset.x;
+                    primitive.position[1] += p.offset.y;
+
+                    primitive
+                })
+                .collect();
 
             self.vertex_buffer
-                .expand_to_fit_new_size(device, vertices.len());
+                .expand_to_fit_new_size(device, primitives.len());
             self.vertex_buffer.write(queue, 0, &vertices);
 
             self.num_vertices = vertices.len();
-            self.needs_preparing = false;
 
             Ok(())
         }
 
-        fn render_primitives<'pass>(
+        fn render_primitive<'pass>(
             &'pass self,
-            primitives: &[QueuedCustomPrimitive],
+            primitive_index: usize,
             render_pass: &mut wgpu::RenderPass<'pass>,
         ) -> Result<(), Box<dyn std::error::Error>> {
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_bind_group(0, &self.constants_bind_group, &[]);
 
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.num_vertices));
-
-            for p in primitives.iter() {
-                if let Some(entry) = self.primitives.get(&p.id) {
-                    render_pass.draw(0..3, entry.vertex_index..entry.vertex_index + 1);
-                };
-            }
+            render_pass.set_vertex_buffer(
+                0,
+                self.vertex_buffer
+                    .slice(primitive_index..primitive_index + 1),
+            );
+            render_pass.draw(0..3, 0..1);
 
             Ok(())
         }
@@ -304,6 +234,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 // ---------------------------------------------------------------------------------------
 
+use rootvg::math::{PhysicalSizeI32, Point, Rect, ScaleFactor, Size, Vector};
+use rootvg::quad::{SolidQuad, SolidQuadPrimitive};
+use rootvg::{color::RGBA8, pipeline::CustomPrimitive, surface::DefaultSurface, Canvas};
 use rootvg_text::{glyphon::FontSystem, svg::SvgIconSystem};
 use std::sync::Arc;
 use winit::{
@@ -312,10 +245,6 @@ use winit::{
     event_loop::{ActiveEventLoop, EventLoop},
     window::{Window, WindowId},
 };
-
-use rootvg::math::{PhysicalSizeI32, Point, Rect, ScaleFactor, Size, Vector};
-use rootvg::quad::{SolidQuad, SolidQuadPrimitive};
-use rootvg::{color::RGBA8, pipeline::CustomPrimitive, surface::DefaultSurface, Canvas};
 
 use self::my_custom_primitive::{MyCustomPrimitive, MyCustomPrimitivePipeline};
 
@@ -343,9 +272,8 @@ struct State {
     surface: DefaultSurface<'static>,
     canvas: Canvas,
 
-    my_custom_pipeline: MyCustomPrimitivePipeline,
-    custom_primitive_1: CustomPrimitive,
-    custom_primitive_2: CustomPrimitive,
+    my_custom_primitive_1: CustomPrimitive,
+    my_custom_primitive_2: CustomPrimitive,
 }
 
 struct CustomPrimitiveApp {
@@ -385,23 +313,13 @@ impl CustomPrimitiveApp {
         )
         .unwrap();
 
-        let mut canvas_config = surface.canvas_config();
-        canvas_config.num_custom_pipelines = 1;
-
-        // --- Initialize custom pipeline ----------------------------------------------------
-
-        let mut my_custom_pipeline = MyCustomPrimitivePipeline::new(
-            0,
-            &surface.device,
-            surface.format(),
-            canvas_config.multisample,
-        );
+        let canvas_config = surface.canvas_config();
 
         // --- Canvas ------------------------------------------------------------------------
 
         // A `Canvas` automatically batches primitives and renders them to a
         // render target (such as the output framebuffer).
-        let canvas = rootvg::Canvas::new(
+        let mut canvas = rootvg::Canvas::new(
             &surface.device,
             &surface.queue,
             surface.format(),
@@ -409,20 +327,34 @@ impl CustomPrimitiveApp {
             &mut self.font_system,
         );
 
+        // --- Initialize custom pipeline ----------------------------------------------------
+
+        let my_custom_pipeline_id = canvas.insert_custom_pipeline(MyCustomPrimitivePipeline::new(
+            &surface.device,
+            surface.format(),
+            canvas_config.multisample,
+        ));
+
         // --- Create custom primitives ------------------------------------------------------
 
-        let custom_primitive_1 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
-            color: RGBA8::new(255, 0, 0, 255).into(),
-            position: Point::new(110.0, 100.0).into(),
-            size: Size::new(100.0, 100.0).into(),
-        });
+        let my_custom_primitive_1 = CustomPrimitive::new(
+            MyCustomPrimitive::new(
+                RGBA8::new(255, 0, 0, 255),
+                Point::new(110.0, 100.0),
+                Size::new(100.0, 100.0),
+            ),
+            my_custom_pipeline_id,
+        );
 
-        let mut custom_primitive_2 = my_custom_pipeline.add_primitive(MyCustomPrimitive {
-            color: RGBA8::new(0, 255, 255, 255).into(),
-            position: Point::new(100.0, 100.0).into(),
-            size: Size::new(100.0, 100.0).into(),
-        });
-        custom_primitive_2.offset = Vector::new(100.0, 100.0);
+        let my_custom_primitive_2 = CustomPrimitive::new_with_offset(
+            MyCustomPrimitive::new(
+                RGBA8::new(0, 255, 255, 255),
+                Point::new(100.0, 100.0),
+                Size::new(100.0, 100.0),
+            ),
+            Vector::new(100.0, 100.0),
+            my_custom_pipeline_id,
+        );
 
         self.state = Some(State {
             window,
@@ -430,9 +362,8 @@ impl CustomPrimitiveApp {
             scale_factor,
             surface,
             canvas,
-            my_custom_pipeline,
-            custom_primitive_1,
-            custom_primitive_2,
+            my_custom_primitive_1,
+            my_custom_primitive_2,
         });
     }
 }
@@ -471,8 +402,8 @@ impl ApplicationHandler for CustomPrimitiveApp {
 
                     cx.set_z_index(1);
 
-                    cx.add(state.custom_primitive_1.clone());
-                    cx.add(state.custom_primitive_2.clone());
+                    cx.add(state.my_custom_primitive_1.clone());
+                    cx.add(state.my_custom_primitive_2.clone());
 
                     cx.set_z_index(2);
 
@@ -503,7 +434,6 @@ impl ApplicationHandler for CustomPrimitiveApp {
                         &mut encoder,
                         &view,
                         state.physical_size,
-                        &mut [&mut state.my_custom_pipeline],
                         &mut self.font_system,
                         &mut self.svg_icon_system,
                     )

@@ -5,7 +5,9 @@ use crate::Primitive;
 use super::{BatchEntry, BatchKey, Canvas};
 
 #[cfg(feature = "custom-primitive")]
-use super::QueuedCustomPrimitive;
+use super::CustomPrimitive;
+#[cfg(feature = "custom-primitive")]
+use rootvg_core::pipeline::{CustomPipeline, CustomPipelineID};
 
 pub struct CanvasCtx<'a> {
     pub(super) canvas: &'a mut Canvas,
@@ -44,12 +46,7 @@ impl<'a> CanvasCtx<'a> {
             .entry(key)
             .or_insert_with(|| BatchEntry::new());
 
-        add(
-            primitive,
-            batch_entry,
-            #[cfg(feature = "custom-primitive")]
-            self.canvas.num_custom_pipelines,
-        );
+        add(primitive, batch_entry);
     }
 
     pub fn add_with_offset(&mut self, primitive: impl Into<Primitive>, offset: Vector) {
@@ -64,13 +61,7 @@ impl<'a> CanvasCtx<'a> {
             .entry(key)
             .or_insert_with(|| BatchEntry::new());
 
-        add_with_offset(
-            primitive,
-            offset,
-            batch_entry,
-            #[cfg(feature = "custom-primitive")]
-            self.canvas.num_custom_pipelines,
-        );
+        add_with_offset(primitive, offset, batch_entry);
     }
 
     pub fn add_batch(&mut self, primitives: impl IntoIterator<Item = impl Into<Primitive>>) {
@@ -86,12 +77,7 @@ impl<'a> CanvasCtx<'a> {
             .or_insert_with(|| BatchEntry::new());
 
         for primitive in primitives.into_iter() {
-            add(
-                primitive,
-                batch_entry,
-                #[cfg(feature = "custom-primitive")]
-                self.canvas.num_custom_pipelines,
-            );
+            add(primitive, batch_entry);
         }
     }
 
@@ -112,13 +98,7 @@ impl<'a> CanvasCtx<'a> {
             .or_insert_with(|| BatchEntry::new());
 
         for primitive in primitives.into_iter() {
-            add_with_offset(
-                primitive,
-                offset,
-                batch_entry,
-                #[cfg(feature = "custom-primitive")]
-                self.canvas.num_custom_pipelines,
-            );
+            add_with_offset(primitive, offset, batch_entry);
         }
     }
 
@@ -223,35 +203,48 @@ impl<'a> CanvasCtx<'a> {
                 #[cfg(feature = "custom-primitive")]
                 PrimitiveBatchKind::Custom(primitives) => {
                     for p in primitives.iter() {
-                        let Some(custom_batch) = batch_entry
-                            .custom_primitives
-                            .get_mut(p.pipeline_index as usize)
-                        else {
-                            log::error!(
-                                "Primitive group had custom primitive with pipeline index {}, but canvas has {} custom pipelines, ignoring primitive",
-                                p.pipeline_index,
-                                self.canvas.num_custom_pipelines,
-                            );
-
-                            continue;
-                        };
-
-                        custom_batch.push(QueuedCustomPrimitive {
-                            id: p.id,
+                        batch_entry.custom_primitives.push(CustomPrimitive {
+                            primitive: std::rc::Rc::clone(&p.primitive),
                             offset: Vector::new(p.offset.x + offset.x, p.offset.y + offset.y),
+                            pipeline_id: p.pipeline_id,
                         });
                     }
                 }
             }
         }
     }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn insert_custom_pipeline(
+        &mut self,
+        pipeline: impl CustomPipeline + 'static,
+    ) -> CustomPipelineID {
+        self.canvas.insert_custom_pipeline(pipeline)
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn custom_pipeline(&self, id: CustomPipelineID) -> Option<&Box<dyn CustomPipeline>> {
+        self.canvas.custom_pipeline(id)
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn custom_pipeline_mut(
+        &mut self,
+        id: CustomPipelineID,
+    ) -> Option<&mut Box<dyn CustomPipeline>> {
+        self.canvas.custom_pipeline_mut(id)
+    }
+
+    #[cfg(feature = "custom-primitive")]
+    pub fn remove_custom_pipeline(
+        &mut self,
+        id: CustomPipelineID,
+    ) -> Option<Box<dyn CustomPipeline>> {
+        self.canvas.remove_custom_pipeline(id)
+    }
 }
 
-fn add(
-    primitive: impl Into<Primitive>,
-    batch_entry: &mut BatchEntry,
-    #[cfg(feature = "custom-primitive")] num_custom_pipelines: usize,
-) {
+fn add(primitive: impl Into<Primitive>, batch_entry: &mut BatchEntry) {
     let primitive: Primitive = primitive.into();
 
     match primitive {
@@ -285,39 +278,12 @@ fn add(
 
         #[cfg(feature = "custom-primitive")]
         Primitive::Custom(p) => {
-            if batch_entry.custom_primitives.len() < num_custom_pipelines {
-                batch_entry
-                    .custom_primitives
-                    .resize(num_custom_pipelines, Vec::new());
-            }
-
-            let Some(custom_batch) = batch_entry
-                .custom_primitives
-                .get_mut(p.pipeline_index as usize)
-            else {
-                log::error!(
-                    "Tried to add custom primitive with pipeline index {}, but canvas has {} custom pipelines, ignoring primitive",
-                    p.pipeline_index,
-                    num_custom_pipelines,
-                );
-
-                return;
-            };
-
-            custom_batch.push(QueuedCustomPrimitive {
-                id: p.id,
-                offset: p.offset,
-            });
+            batch_entry.custom_primitives.push(p);
         }
     }
 }
 
-fn add_with_offset(
-    primitive: impl Into<Primitive>,
-    offset: Vector,
-    batch_entry: &mut BatchEntry,
-    #[cfg(feature = "custom-primitive")] num_custom_pipelines: usize,
-) {
+fn add_with_offset(primitive: impl Into<Primitive>, offset: Vector, batch_entry: &mut BatchEntry) {
     let primitive: Primitive = primitive.into();
 
     match primitive {
@@ -369,28 +335,10 @@ fn add_with_offset(
 
         #[cfg(feature = "custom-primitive")]
         Primitive::Custom(p) => {
-            if batch_entry.custom_primitives.len() < num_custom_pipelines {
-                batch_entry
-                    .custom_primitives
-                    .resize(num_custom_pipelines, Vec::new());
-            }
-
-            let Some(custom_batch) = batch_entry
-                .custom_primitives
-                .get_mut(p.pipeline_index as usize)
-            else {
-                log::error!(
-                    "Tried to add custom primitive with pipeline index {}, but canvas has {} custom pipelines, ignoring primitive",
-                    p.pipeline_index,
-                    num_custom_pipelines,
-                );
-
-                return;
-            };
-
-            custom_batch.push(QueuedCustomPrimitive {
-                id: p.id,
+            batch_entry.custom_primitives.push(CustomPrimitive {
+                primitive: std::rc::Rc::clone(&p.primitive),
                 offset: Vector::new(p.offset.x + offset.x, p.offset.y + offset.y),
+                pipeline_id: p.pipeline_id,
             });
         }
     }
