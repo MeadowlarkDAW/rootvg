@@ -30,7 +30,7 @@ use rootvg::{
     Canvas,
 };
 use rootvg_mesh::MeshPrimitive;
-use rootvg_text::{svg::SvgIconSystem, ContentType, CustomGlyphDesc, FontSystem};
+use rootvg_text::{svg::SvgIconSystem, ContentType, CustomGlyph, FontSystem};
 
 const WINDOW_SIZE: (f32, f32) = (800.0, 425.0);
 
@@ -228,12 +228,14 @@ impl DemoApp {
             // Convenience method for creating an RGBA8 color
             hex(0x9664c8),
             Some(Rect::from_size(Size::new(100.0, 100.0))),
-            smallvec![CustomGlyphDesc {
+            smallvec![CustomGlyph {
                 id: 0,
                 left: 0.0,
                 top: 0.0,
                 color: None,
-                size: 64.0,
+                snap_to_physical_pixel: true,
+                width: 64.0,
+                height: 64.0,
                 metadata: 0,
             }],
         );

@@ -162,7 +162,8 @@ impl TextPipeline {
             })
             .collect();
 
-        batch.text_renderer.prepare(
+        #[cfg(not(feature = "svg-icons"))]
+        return batch.text_renderer.prepare(
             device,
             queue,
             font_system,
@@ -170,9 +171,19 @@ impl TextPipeline {
             &self.viewport,
             text_areas,
             &mut self.swash_cache,
-            #[cfg(feature = "svg-icons")]
+        );
+
+        #[cfg(feature = "svg-icons")]
+        return batch.text_renderer.prepare_with_custom(
+            device,
+            queue,
+            font_system,
+            &mut self.atlas,
+            &self.viewport,
+            text_areas,
+            &mut self.swash_cache,
             |input| svg_system.render_custom_glyph(input),
-        )
+        );
     }
 
     pub fn finish_preparations(&mut self, _device: &wgpu::Device, _queue: &wgpu::Queue) {

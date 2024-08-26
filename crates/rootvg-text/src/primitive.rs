@@ -12,7 +12,7 @@ pub struct TextPrimitive {
     pub clipping_bounds: Option<Rect>,
 
     #[cfg(feature = "svg-icons")]
-    pub icons: smallvec::SmallVec<[glyphon::CustomGlyphDesc; 2]>,
+    pub icons: smallvec::SmallVec<[glyphon::CustomGlyph; 2]>,
 }
 
 impl TextPrimitive {
@@ -55,7 +55,7 @@ impl TextPrimitive {
         pos: Point,
         color: RGBA8,
         clipping_bounds: Option<Rect>,
-        icons: smallvec::SmallVec<[glyphon::CustomGlyphDesc; 2]>,
+        icons: smallvec::SmallVec<[glyphon::CustomGlyph; 2]>,
     ) -> Self {
         Self {
             buffer,

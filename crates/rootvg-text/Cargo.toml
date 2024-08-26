@@ -15,7 +15,7 @@ keywords.workspace = true
 [features]
 default = ["svg-icons", "web-colors"]
 serde = ["rootvg-core/serde"]
-svg-icons = ["dep:resvg", "glyphon/custom-glyphs"]
+svg-icons = ["dep:resvg"]
 svg-icon-raster-images = ["svg-icons", "resvg/raster-images"]
 # Enables broken "sRGB linear" blending to reproduce color management of the Web.
 # Recommended for better text legibility.
@@ -30,5 +30,5 @@ thiserror.workspace = true
 bytemuck.workspace = true
 smallvec.workspace = true
 rustc-hash.workspace = true
-glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "4f19f0f4deed1274e08c13e1f03901bd88fa7eae" }
+glyphon = { git = "https://github.com/grovesNL/glyphon", rev = "18c4b1348d319c82d47ef012815eb888b033f75f" }
 resvg = { version = "0.43", default-features = false, optional = true }

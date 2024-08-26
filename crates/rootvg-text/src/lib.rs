@@ -23,4 +23,4 @@ pub use primitive::TextPrimitive;
 pub use properties::TextProperties;
 
 #[cfg(feature = "svg-icons")]
-pub use glyphon::{CustomGlyphDesc, CustomGlyphID};
+pub use glyphon::{CustomGlyph, CustomGlyphId};

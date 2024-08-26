@@ -1,18 +1,16 @@
 use std::path::Path;
 
-use glyphon::{ContentType, CustomGlyphInput, CustomGlyphOutput};
+use glyphon::{ContentType, CustomGlyphId, RasterizationRequest, RasterizedCustomGlyph};
 use resvg::{tiny_skia::Pixmap, usvg::Transform};
 use rustc_hash::FxHashMap;
 
 // Re-export resvg for convenience.
 pub use resvg;
 
-use crate::CustomGlyphID;
-
 /// A system for loading, parsing, and rastering SVG icons
 #[derive(Default)]
 pub struct SvgIconSystem {
-    svgs: FxHashMap<CustomGlyphID, SvgData>,
+    svgs: FxHashMap<CustomGlyphId, SvgData>,
 }
 
 impl SvgIconSystem {
@@ -25,7 +23,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_tree(
         &mut self,
-        id: impl Into<CustomGlyphID>,
+        id: impl Into<CustomGlyphId>,
         tree: resvg::usvg::Tree,
         content_type: ContentType,
     ) {
@@ -42,7 +40,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_bytes(
         &mut self,
-        id: impl Into<CustomGlyphID>,
+        id: impl Into<CustomGlyphId>,
         data: &[u8],
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -62,7 +60,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_str(
         &mut self,
-        id: impl Into<CustomGlyphID>,
+        id: impl Into<CustomGlyphId>,
         text: &str,
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -82,7 +80,7 @@ impl SvgIconSystem {
     /// color.
     pub fn add_from_path(
         &mut self,
-        id: impl Into<CustomGlyphID>,
+        id: impl Into<CustomGlyphId>,
         path: &Path,
         opt: &resvg::usvg::Options<'_>,
         content_type: ContentType,
@@ -95,40 +93,37 @@ impl SvgIconSystem {
 
     // Returns `true` if the source was removed, or `false` if there was
     // no source with that ID.
-    pub fn remove(&mut self, id: impl Into<CustomGlyphID>) -> bool {
+    pub fn remove(&mut self, id: impl Into<CustomGlyphId>) -> bool {
         self.svgs.remove(&id.into()).is_some()
     }
 
     /// Rasterize the SVG icon.
-    pub fn render_custom_glyph(&mut self, input: CustomGlyphInput) -> Option<CustomGlyphOutput> {
+    pub fn render_custom_glyph(
+        &mut self,
+        input: RasterizationRequest,
+    ) -> Option<RasterizedCustomGlyph> {
         let Some(svg_data) = self.svgs.get(&input.id) else {
             return None;
         };
 
         let svg_size = svg_data.tree.size();
-        let max_side_len = svg_size.width().max(svg_size.height());
+        let should_rasterize = svg_size.width() > 0.0 && svg_size.height() > 0.0;
 
-        let should_rasterize = max_side_len > 0.0;
+        let (scale_x, scale_y, pixmap) = if should_rasterize {
+            let scale_x = input.width as f32 / svg_size.width();
+            let scale_y = input.height as f32 / svg_size.height();
 
-        let (scale, width, height, pixmap) = if should_rasterize {
-            let glyph_size = input.size * input.scale;
-            let scale = glyph_size / max_side_len;
-            let width = (svg_size.width() * scale).ceil();
-            let height = (svg_size.height() * scale).ceil();
-
-            if width <= 0.0 || height <= 0.0 {
-                (0.0, 0, 0, None)
-            } else if let Some(pixmap) = Pixmap::new(width as u32, height as u32) {
-                (scale, width as u32, height as u32, Some(pixmap))
+            if let Some(pixmap) = Pixmap::new(input.width as u32, input.height as u32) {
+                (scale_x, scale_y, Some(pixmap))
             } else {
-                (0.0, 0, 0, None)
+                (0.0, 0.0, None)
             }
         } else {
-            (0.0, 0, 0, None)
+            (0.0, 0.0, None)
         };
 
         if let Some(mut pixmap) = pixmap {
-            let mut transform = Transform::from_scale(scale, scale);
+            let mut transform = Transform::from_scale(scale_x, scale_y);
 
             let offset_x = input.x_bin.as_float();
             let offset_y = input.y_bin.as_float();
@@ -146,10 +141,8 @@ impl SvgIconSystem {
                 pixmap.data().to_vec()
             };
 
-            Some(CustomGlyphOutput {
+            Some(RasterizedCustomGlyph {
                 data,
-                width,
-                height,
                 content_type: svg_data.content_type,
             })
         } else {
