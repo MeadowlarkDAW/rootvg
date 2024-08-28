@@ -59,6 +59,10 @@ pub use context::CanvasCtx;
 struct CustomPipelineEntry {
     pipeline: Box<dyn CustomPipeline>,
     primitives_to_prepare: Vec<CustomPipelinePrimitive>,
+
+    prev_prepared_screen_size: PhysicalSizeI32,
+    prev_prepared_scale_factor: ScaleFactor,
+    prev_prepared_primitives: Vec<CustomPipelinePrimitive>,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,6 +222,9 @@ impl Canvas {
         CustomPipelineID(self.custom_pipelines.insert(CustomPipelineEntry {
             pipeline: Box::new(pipeline),
             primitives_to_prepare: Vec::new(),
+            prev_prepared_screen_size: PhysicalSizeI32::default(),
+            prev_prepared_scale_factor: ScaleFactor::default(),
+            prev_prepared_primitives: Vec::new(),
         }))
     }
 
@@ -625,6 +632,17 @@ impl Canvas {
             if entry.primitives_to_prepare.is_empty() {
                 continue;
             }
+
+            if entry.prev_prepared_screen_size == self.physical_size
+                && entry.prev_prepared_scale_factor == self.scale_factor
+                && entry.prev_prepared_primitives == entry.primitives_to_prepare
+            {
+                continue;
+            }
+
+            entry.prev_prepared_screen_size = self.physical_size;
+            entry.prev_prepared_scale_factor = self.scale_factor;
+            entry.prev_prepared_primitives = entry.primitives_to_prepare.clone();
 
             if let Err(e) = entry.pipeline.prepare(
                 device,

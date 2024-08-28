@@ -36,6 +36,14 @@ impl CustomPrimitive {
             pipeline_id,
         }
     }
+
+    pub fn new_from_rc(primitive: &Rc<dyn Any>, pipeline_id: CustomPipelineID) -> Self {
+        Self {
+            primitive: Rc::clone(primitive),
+            offset: Vector::default(),
+            pipeline_id,
+        }
+    }
 }
 
 impl PartialEq for CustomPrimitive {
@@ -47,6 +55,11 @@ impl PartialEq for CustomPrimitive {
 }
 
 pub trait CustomPipeline: Any {
+    /// Prepare to render the given list of primitives
+    ///
+    /// Note, if the screen size, scale factor, and list of primitives have not
+    /// changed since the last preparation, then Yarrow will automatically
+    /// skip calling this method.
     fn prepare(
         &mut self,
         device: &wgpu::Device,
@@ -56,6 +69,10 @@ pub trait CustomPipeline: Any {
         primitives: &[CustomPipelinePrimitive],
     ) -> Result<(), Box<dyn Error>>;
 
+    /// Render a primitive
+    ///
+    /// The `primitive_index` is the index into the slice of primitives that
+    /// was previously passed into `CustomPipeline::prepare`.
     fn render_primitive<'pass>(
         &'pass self,
         primitive_index: usize,
