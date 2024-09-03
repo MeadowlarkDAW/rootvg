@@ -1,31 +1,8 @@
 [package]
 name = "rootvg"
 version = "0.3.0"
-description = "A 2D vector graphics library optimized for GUIs"
+description = "A 2D vector graphics library for wgpu based on nanovg"
 readme = "README.md"
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-homepage.workspace = true
-categories.workspace = true
-keywords.workspace = true
-
-[badges]
-maintenance = { status = "actively-developed" }
-
-[workspace]
-members = [
-    "crates/rootvg-core",
-    "crates/rootvg-image",
-    "crates/rootvg-mesh",
-    "crates/rootvg-msaa",
-    "crates/rootvg-quad",
-    "crates/rootvg-tessellation",
-    "crates/rootvg-text",
-]
-
-[workspace.package]
 edition = "2021"
 authors = ["Billy Messenger <60663878+BillyDM@users.noreply.github.com>"]
 license = "MIT"
@@ -35,110 +12,19 @@ repository = "https://github.com/MeadowlarkDAW/rootvg"
 categories = ["graphics", "rendering", "rendering::engine"]
 keywords = ["vector", "graphics", "gpu", "2d"]
 
+[badges]
+maintenance = { status = "actively-developed" }
+
 [package.metadata.docs.rs]
 all-features = true
 
 [features]
-default = [
-    "quad",
-    "mesh",
-    "tessellation",
-    "text",
-    "image",
-    "msaa",
-    "gradient",
-    "svg-icons",
-    "default-surface",
-    "web-colors",
-]
-## Enables drawing meshes of triangles
-mesh = ["dep:rootvg-mesh"]
-## Enables anti-aliasing using MSAA. This only effects mesh primitives and
-## custom primitives, so consider disabling this if the `mesh`,`tessellation`,
-## and "custom-primitive" features are disabled.
-msaa = ["dep:rootvg-msaa"]
-## Enables drawing of quads
-quad = ["dep:rootvg-quad"]
-## Enables using lyon to tessellate vector shapes into a mesh for rendering
-tessellation = ["dep:rootvg-tessellation", "dep:rootvg-mesh"]
-## Enables drawing of text
-text = ["dep:rootvg-text"]
-## Enables drawing of images
-image = ["dep:rootvg-image"]
-## Enables filling quads and meshes with gradients
-gradient = ["rootvg-core/gradient", "rootvg-quad?/gradient", "rootvg-mesh?/gradient", "rootvg-tessellation?/gradient"]
-## Enables rendering svg icons (feature "text" must be enabled)
-svg-icons = ["text", "rootvg-text?/svg-icons"]
-## Enables support for rendering raster images in svg icons
-svg-icon-raster-images = ["text", "svg-icons", "rootvg-text?/svg-icon-raster-images"]
-## Enables support for custom primitives
-custom-primitive = []
-## Enables a default wgpu surface configuration
-default-surface = ["dep:pollster"]
-serde = [
-    "rootvg-core/serde",
-    "rootvg-image?/serde",
-    "rootvg-mesh?/serde",
-    "rootvg-msaa?/serde",
-    "rootvg-quad?/serde",
-    "rootvg-tessellation?/serde",
-    "rootvg-text?/serde",
-]
-# Enables broken "sRGB linear" blending to reproduce color management of the Web.
-# Recommended for better text legibility.
-# See: https://github.com/iced-rs/iced/pull/1888
-#      https://github.com/pop-os/cosmic-text/issues/195
-web-colors = [
-    "rootvg-core/web-colors",
-    "rootvg-image?/web-colors",
-    "rootvg-mesh?/web-colors",
-    "rootvg-msaa?/web-colors",
-    "rootvg-quad?/web-colors",
-    "rootvg-tessellation?/web-colors",
-    "rootvg-text?/web-colors",
-]
 
 [dependencies]
-rootvg-core = { version = "0.3", path = "crates/rootvg-core", default-features = false }
-rootvg-image = { version = "0.3", path = "crates/rootvg-image", default-features = false, optional = true }
-rootvg-mesh = { version = "0.3", path = "crates/rootvg-mesh", default-features = false, optional = true }
-rootvg-msaa = { version = "0.3", path = "crates/rootvg-msaa", default-features = false, optional = true }
-rootvg-quad = { version = "0.3", path = "crates/rootvg-quad", default-features = false, optional = true }
-rootvg-tessellation = { version = "0.3", path = "crates/rootvg-tessellation", default-features = false, optional = true }
-rootvg-text = { version = "0.3", path = "crates/rootvg-text", default-features = false, optional = true }
-pollster = { version = "0.3.0", optional = true }
-rustc-hash.workspace = true
-log.workspace = true
-smallvec.workspace = true
-thiserror.workspace = true
-wgpu.workspace = true
-thunderdome.workspace = true
+log = "0.4.21"
+wgpu = { version = "22", default-features = false, features = ["wgsl"] }
 
 [dev-dependencies]
-winit.workspace = true
+winit = { version = "0.30.0" }
 wgpu = { version = "22", default-features = true }
 pollster = "0.3.0"
-env_logger.workspace = true
-bytemuck.workspace = true
-rustc-hash.workspace = true
-image = { version = "0.25.0", default-features = false, features = ["rayon", "png"] }
-
-[workspace.dependencies]
-rgb = "0.8.37"
-smallvec = "1.13.1"
-rustc-hash = "2.0"
-euclid = { version = "0.22.9", default-features = false }
-wgpu = { version = "22", default-features = false, features = ["wgsl"] }
-bytemuck = { version = "1.14.1", features = ["derive"] }
-log = "0.4.21"
-winit = { version = "0.30.0" }
-env_logger = "0.11.3"
-thiserror = "1.0.57"
-half = "2.3.1"
-bitflags = "2.6"
-thunderdome = "0.6.1"
-
-[[example]]
-name = "custom_primitive"
-path = "examples/custom_primitive.rs"
-required-features = ["custom-primitive"]
