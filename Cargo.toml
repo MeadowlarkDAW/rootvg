@@ -19,12 +19,24 @@ maintenance = { status = "actively-developed" }
 all-features = true
 
 [features]
+image = ["dep:image"]
+serde = ["dep:serde", "rgb/serde", "euclid/serde"]
 
 [dependencies]
-log = "0.4.21"
-wgpu = { version = "22", default-features = false, features = ["wgsl"] }
+log = "0.4.22"
+thiserror = "1.0.63"
+bitflags = "2.6.0"
+smallvec = "1.13.2"
+vec1 = "1.12"
+euclid = { version = "0.22.11", features = ["bytemuck"]}
+wgpu = { version = "22.1", default-features = false, features = ["wgsl"] }
+rgb = { version = "0.8.50", default-features = false, features = ["bytemuck"] }
+bytemuck = { version = "1.17.1", features = ["derive"] }
+image = { version = "0.25.0", default-features = false, optional = true }
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
-winit = { version = "0.30.0" }
-wgpu = { version = "22", default-features = true }
+env_logger = "0.11.5"
+winit = "0.30.5"
 pollster = "0.3.0"
+wgpu = { version = "22.1", default-features = true }
