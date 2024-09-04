@@ -1,5 +1,4 @@
 use euclid::default::{Point2D, Size2D, Transform2D};
-use euclid::Angle;
 
 pub mod color;
 mod context;
@@ -213,34 +212,48 @@ impl Scissor {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
-    pub x: f32,
-    pub y: f32,
-    pub u: f32,
-    pub v: f32,
+    pub pos: Point2D<f32>,
+    pub uv: Point2D<f32>,
+}
+
+impl Vertex {
+    pub const fn new(pos: Point2D<f32>, uv: Point2D<f32>) -> Self {
+        Self { pos, uv }
+    }
+}
+
+#[inline]
+/// A shorthand for `Vertex::new(pos, uv)`
+pub const fn vert(pos: Point2D<f32>, uv: Point2D<f32>) -> Vertex {
+    Vertex::new(pos, uv)
 }
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
 pub struct Path {
-    first: u32,
-    count: u32,
+    point_start_index: usize,
+    num_points: usize,
     closed: bool,
-    num_bevel: u32,
-    fill: Vec<Vertex>,
-    stroke: Vec<Vertex>,
+    num_bevels: usize,
+    fill_vert_start_index: usize,
+    num_fill_verts: usize,
+    stroke_vert_start_index: usize,
+    num_stroke_verts: usize,
     winding: Winding,
     convex: bool,
 }
 
 impl Path {
-    pub(crate) fn new(first: u32) -> Self {
+    pub(crate) fn new(point_start_index: usize) -> Self {
         Self {
-            first,
-            count: 0,
+            point_start_index,
+            num_points: 0,
             closed: false,
-            num_bevel: 0,
-            fill: Vec::new(),
-            stroke: Vec::new(),
+            num_bevels: 0,
+            fill_vert_start_index: 0,
+            num_fill_verts: 0,
+            stroke_vert_start_index: 0,
+            num_stroke_verts: 0,
             winding: Winding::CCW,
             convex: false,
         }
