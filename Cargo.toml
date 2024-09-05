@@ -26,7 +26,8 @@ serde = ["dep:serde", "rgb/serde", "euclid/serde"]
 log = "0.4.22"
 thiserror = "1.0.63"
 bitflags = "2.6.0"
-smallvec = "1.13.2"
+#smallvec = "1.13.2"
+#arrayvec = "0.7.6"
 vec1 = "1.12"
 euclid = { version = "0.22.11", features = ["bytemuck"]}
 wgpu = { version = "22.1", default-features = false, features = ["wgsl"] }

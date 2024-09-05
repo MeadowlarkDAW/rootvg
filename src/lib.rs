@@ -3,6 +3,7 @@ use euclid::default::{Point2D, Size2D, Transform2D};
 pub mod color;
 mod context;
 pub mod math;
+pub mod pipeline;
 
 pub use color::Color;
 pub use context::Context;
@@ -20,7 +21,8 @@ pub struct Paint {
 }
 
 impl Paint {
-    pub fn new(color: Color) -> Self {
+    pub fn new(color: impl Into<Color>) -> Self {
+        let color: Color = color.into();
         Self {
             xform: Transform2D::identity(),
             extent: Size2D::zero(),
@@ -217,8 +219,19 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    pub const ATTRIBS: [wgpu::VertexAttribute; 2] =
+        wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2];
+
     pub const fn new(pos: Point2D<f32>, uv: Point2D<f32>) -> Self {
         Self { pos, uv }
+    }
+
+    pub const fn desc() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &Self::ATTRIBS,
+        }
     }
 }
 

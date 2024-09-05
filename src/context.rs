@@ -12,9 +12,9 @@ use crate::{
     Path, Scissor, Vertex, Winding,
 };
 
-const INIT_FONTIMAGE_SIZE: usize = 512;
-const MAX_FONTIMAGE_SIZE: usize = 2048;
-const MAX_FONTIMAGES: usize = 4;
+//const INIT_FONTIMAGE_SIZE: usize = 512;
+//const MAX_FONTIMAGE_SIZE: usize = 2048;
+//const MAX_FONTIMAGES: usize = 4;
 
 const INIT_COMMANDS_SIZE: usize = 64;
 const INIT_POINTS_SIZE: usize = 128;
@@ -24,6 +24,7 @@ const INIT_STATES: usize = 64;
 
 /// Length proportional to radius of a cubic bezier handle for 90deg arcs
 const KAPPA90: f32 = 0.5522847493;
+const ONE_MINUS_KAPPA90: f32 = 1.0 - KAPPA90;
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -144,8 +145,7 @@ impl PathCache {
 pub struct Context {
     // NVGparams params;
     commands: Vec<Command>,
-    command_x: f32,
-    command_y: f32,
+    command_pos: Point2D<f32>,
     states: Vec1<State>,
     cache: PathCache,
     tess_tol: f32,
@@ -162,8 +162,7 @@ impl Context {
     pub fn new() -> Self {
         let mut new_self = Self {
             commands: Vec::with_capacity(INIT_COMMANDS_SIZE),
-            command_x: 0.0,
-            command_y: 0.0,
+            command_pos: Point2D::default(),
             states: Vec1::with_capacity(State::default(), INIT_STATES),
             cache: PathCache::new(),
             tess_tol: 0.0,
@@ -268,24 +267,24 @@ impl Context {
         self.state_mut().xform = Transform2D::identity();
     }
 
-    pub fn translate(&mut self, v: Vector2D<f32>) {
+    pub fn translate(&mut self, v: impl Into<Vector2D<f32>>) {
         let state = self.state_mut();
-        state.xform = state.xform.pre_translate(v);
+        state.xform = state.xform.pre_translate(v.into());
     }
 
-    pub fn rotate(&mut self, angle: Angle<f32>) {
+    pub fn rotate(&mut self, angle: impl Into<Angle<f32>>) {
         let state = self.state_mut();
-        state.xform = state.xform.pre_rotate(angle);
+        state.xform = state.xform.pre_rotate(angle.into());
     }
 
-    pub fn skew_x(&mut self, angle: Angle<f32>) {
+    pub fn skew_x(&mut self, angle: impl Into<Angle<f32>>) {
         let state = self.state_mut();
-        state.xform = crate::math::transform_skew_x(angle).then(&state.xform);
+        state.xform = crate::math::transform_skew_x(angle.into()).then(&state.xform);
     }
 
-    pub fn skew_y(&mut self, angle: Angle<f32>) {
+    pub fn skew_y(&mut self, angle: impl Into<Angle<f32>>) {
         let state = self.state_mut();
-        state.xform = crate::math::transform_skew_y(angle).then(&state.xform);
+        state.xform = crate::math::transform_skew_y(angle.into()).then(&state.xform);
     }
 
     pub fn scale(&mut self, x: f32, y: f32) {
@@ -297,7 +296,7 @@ impl Context {
         &self.state().xform
     }
 
-    pub fn stroke_color(&mut self, color: Color) {
+    pub fn stroke_color(&mut self, color: impl Into<Color>) {
         self.state_mut().stroke = Paint::new(color);
     }
 
@@ -307,7 +306,7 @@ impl Context {
         state.stroke.xform = state.stroke.xform.then(&state.xform);
     }
 
-    pub fn fill_color(&mut self, color: Color) {
+    pub fn fill_color(&mut self, color: impl Into<Color>) {
         self.state_mut().fill = Paint::new(color);
     }
 
@@ -317,8 +316,10 @@ impl Context {
         state.fill.xform = state.fill.xform.then(&state.xform);
     }
 
-    pub fn scissor(&mut self, mut rect: Rect<f32>) {
+    pub fn scissor(&mut self, rect: impl Into<Rect<f32>>) {
         let state = self.state_mut();
+
+        let mut rect: Rect<f32> = rect.into();
 
         rect.size.width = rect.size.width.max(0.0);
         rect.size.height = rect.size.height.max(0.0);
@@ -332,8 +333,10 @@ impl Context {
     }
 
     // TODO: Custom error
-    pub fn intersect_scissor(&mut self, rect: Rect<f32>) -> Result<(), ()> {
+    pub fn intersect_scissor(&mut self, rect: impl Into<Rect<f32>>) -> Result<(), ()> {
         let state = self.state_mut();
+
+        let rect: Rect<f32> = rect.into();
 
         // If no previous scissor has been set, set the scissor as current scissor.
         if state.scissor.extent.width < 0.0 {
@@ -402,12 +405,14 @@ impl Context {
     }
 
     pub fn move_to(&mut self, pos: impl Into<Point2D<f32>>) {
-        let pos = self.state().xform.transform_point(pos.into());
+        self.command_pos = pos.into();
+        let pos = self.state().xform.transform_point(self.command_pos);
         self.commands.push(Command::MoveTo(pos));
     }
 
     pub fn line_to(&mut self, pos: impl Into<Point2D<f32>>) {
-        let pos = self.state().xform.transform_point(pos.into());
+        self.command_pos = pos.into();
+        let pos = self.state().xform.transform_point(self.command_pos);
         self.commands.push(Command::LineTo(pos));
     }
 
@@ -417,9 +422,11 @@ impl Context {
         h1_pos: impl Into<Point2D<f32>>,
         h2_pos: impl Into<Point2D<f32>>,
     ) {
+        self.command_pos = pos.into();
+
         let state = self.state();
 
-        let pos = state.xform.transform_point(pos.into());
+        let pos = state.xform.transform_point(self.command_pos);
         let h1_pos = state.xform.transform_point(h1_pos.into());
         let h2_pos = state.xform.transform_point(h2_pos.into());
 
@@ -428,6 +435,360 @@ impl Context {
             h1_pos,
             h2_pos,
         });
+    }
+
+    pub fn quad_to(&mut self, pos: impl Into<Point2D<f32>>, c: impl Into<Point2D<f32>>) {
+        let pos: Point2D<f32> = pos.into();
+        let c: Point2D<f32> = c.into();
+
+        self.bezier_to(
+            pos,
+            self.command_pos + ((c - self.command_pos) * (2.0 / 3.0)),
+            pos + ((c - pos) * (2.0 / 3.0)),
+        );
+    }
+
+    pub fn arc_to(
+        &mut self,
+        p1: impl Into<Point2D<f32>>,
+        p2: impl Into<Point2D<f32>>,
+        radius: f32,
+    ) {
+        if self.commands.is_empty() {
+            return;
+        }
+
+        let p1: Point2D<f32> = p1.into();
+        let p2: Point2D<f32> = p2.into();
+
+        let p0 = self.command_pos;
+
+        // Handle degenerate cases
+        if point_approx_equals(p0, p1, self.dist_tol)
+            || point_approx_equals(p1, p2, self.dist_tol)
+            || dist_point_seg(p1, p0, p2) < self.dist_tol * self.dist_tol
+            || radius < self.dist_tol
+        {
+            self.line_to(p1);
+            return;
+        }
+
+        // Calculate tangential circle to lines (x0,y0)-(x1,y1) and (x1,y1)-(x2,y2)
+        let mut d0 = p0 - p1;
+        let mut d1 = p2 - p1;
+        normalize(&mut d0);
+        normalize(&mut d1);
+        let a = (d0.x * d1.x + d0.y * d1.y).cos();
+        let d = radius / (a * 0.5).tan();
+
+        if d > 10_000.0 {
+            self.line_to(p1);
+            return;
+        }
+
+        let (center, a0, a1, dir) = if d0.cross(d1) > 0.0 {
+            let center = point2(
+                p1.x + d0.x * d + d0.y * radius,
+                p1.y + d0.y * d - d0.x * radius,
+            );
+            let a0 = d0.x.atan2(-d0.y);
+            let a1 = (-d1.x).atan2(d1.y);
+            (center, a0, a1, Winding::CW)
+        } else {
+            let center = point2(
+                p1.x + d0.x * d - d0.y * radius,
+                p1.y + d0.y * d + d0.x * radius,
+            );
+            let a0 = (-d0.x).atan2(d0.y);
+            let a1 = d1.x.atan2(-d1.y);
+            (center, a0, a1, Winding::CCW)
+        };
+
+        self.arc(center, Angle::radians(a0), Angle::radians(a1), radius, dir);
+    }
+
+    pub fn close_path(&mut self) {
+        self.commands.push(Command::Close);
+    }
+
+    pub fn path_winding(&mut self, dir: Winding) {
+        self.commands.push(Command::Winding(dir));
+    }
+
+    pub fn arc(
+        &mut self,
+        center: impl Into<Point2D<f32>>,
+        angle_0: impl Into<Angle<f32>>,
+        angle_1: impl Into<Angle<f32>>,
+        radius: f32,
+        dir: Winding,
+    ) {
+        self.barc(center, angle_0, angle_1, radius, dir, LineCap::Round)
+    }
+
+    pub fn barc(
+        &mut self,
+        center: impl Into<Point2D<f32>>,
+        angle_0: impl Into<Angle<f32>>,
+        angle_1: impl Into<Angle<f32>>,
+        radius: f32,
+        dir: Winding,
+        join: LineCap,
+    ) {
+        let center: Point2D<f32> = center.into();
+        let angle_0: Angle<f32> = angle_0.into();
+        let angle_1: Angle<f32> = angle_1.into();
+
+        // Clamp angles
+        let mut da = angle_1 - angle_0;
+        if dir == Winding::CW {
+            if da.radians.abs() >= TAU {
+                da.radians = TAU;
+            } else {
+                while da.radians < 0.0 {
+                    da.radians += TAU;
+                }
+            }
+        } else {
+            if da.radians.abs() >= TAU {
+                da.radians = -TAU;
+            } else {
+                while da.radians > 0.0 {
+                    da.radians -= TAU;
+                }
+            }
+        }
+
+        // Split arc into max 90 degree segments
+        let num_divs =
+            1.max(5.min((da.radians.abs() * (1.0 / (PI * 0.5)) + 0.5) as isize)) as usize;
+        let hda = (da / num_divs as f32) * 0.5;
+
+        let mut kappa = (4.0 / 3.0 * (1.0 - hda.radians.cos()) / hda.radians.sin()).abs();
+        if dir == Winding::CCW {
+            kappa = -kappa;
+        }
+
+        let mut prev_pos = Point2D::<f32>::zero();
+        let mut prev_tanv = Vector2D::<f32>::zero();
+
+        let num_divs_recip = (num_divs as f32).recip();
+
+        for i in 0..num_divs {
+            let a = angle_0.radians + da.radians * (i as f32 * num_divs_recip);
+            let delta = vec2(a.cos(), a.sin());
+            let pos = center + (delta * radius);
+            let tanv = vec2(-delta.y * radius * kappa, delta.x * radius * kappa);
+
+            if i == 0 {
+                if join != LineCap::Butt && !self.commands.is_empty() {
+                    self.line_to(pos);
+                } else {
+                    self.move_to(pos);
+                }
+            } else {
+                self.bezier_to(pos, prev_pos + prev_tanv, pos - tanv);
+            }
+
+            prev_pos = pos;
+            prev_tanv = tanv;
+        }
+    }
+
+    pub fn rect(&mut self, rect: impl Into<Rect<f32>>) {
+        let rect: Rect<f32> = rect.into();
+
+        self.move_to(rect.origin);
+        self.line_to(point2(rect.min_x(), rect.max_y()));
+        self.line_to(rect.max());
+        self.line_to(point2(rect.max_x(), rect.min_y()));
+        self.close_path();
+    }
+
+    pub fn rounded_rect(&mut self, rect: impl Into<Rect<f32>>, radius: f32) {
+        self.rounded_rect_varying(rect, radius, radius, radius, radius);
+    }
+
+    pub fn rounded_rect_varying(
+        &mut self,
+        rect: impl Into<Rect<f32>>,
+        rad_top_left: f32,
+        rad_top_right: f32,
+        rad_bottom_right: f32,
+        rad_bottom_left: f32,
+    ) {
+        let rect: Rect<f32> = rect.into();
+
+        if rad_top_left < 0.1
+            && rad_top_right < 0.1
+            && rad_bottom_right < 0.1
+            && rad_bottom_left < 0.1
+        {
+            self.rect(rect);
+        } else {
+            let half_size = rect.size * 0.5;
+
+            let sign_of_width = sign_of(rect.width());
+            let sign_of_height = sign_of(rect.height());
+
+            let bl: Vector2D<f32> = vec2(
+                rad_bottom_left.min(half_size.width) * sign_of_width,
+                rad_bottom_left.min(half_size.height) * sign_of_height,
+            );
+            let br: Vector2D<f32> = vec2(
+                rad_bottom_right.min(half_size.width) * sign_of_width,
+                rad_bottom_right.min(half_size.height) * sign_of_height,
+            );
+            let tl: Vector2D<f32> = vec2(
+                rad_top_left.min(half_size.width) * sign_of_width,
+                rad_top_left.min(half_size.height) * sign_of_height,
+            );
+            let tr: Vector2D<f32> = vec2(
+                rad_top_right.min(half_size.width) * sign_of_width,
+                rad_top_right.min(half_size.height) * sign_of_height,
+            );
+
+            self.move_to(point2(rect.min_x(), rect.min_y() + tl.y));
+
+            self.line_to(point2(rect.min_x(), rect.max_y() - bl.y));
+            self.bezier_to(
+                point2(rect.min_x() + bl.x, rect.max_y()),
+                point2(rect.min_x(), rect.max_y() - bl.y * ONE_MINUS_KAPPA90),
+                point2(rect.min_x() + bl.x * ONE_MINUS_KAPPA90, rect.max_y()),
+            );
+
+            self.line_to(point2(rect.max_x() - br.x, rect.max_y()));
+            self.bezier_to(
+                point2(rect.max_x(), rect.max_y() - br.y),
+                point2(rect.max_x() - br.x * ONE_MINUS_KAPPA90, rect.max_y()),
+                point2(rect.max_x(), rect.max_y() - br.y * ONE_MINUS_KAPPA90),
+            );
+
+            self.line_to(point2(rect.max_x(), rect.min_y() + tr.y));
+            self.bezier_to(
+                point2(rect.max_x() - tr.x, rect.min_y()),
+                point2(rect.max_x(), rect.min_y() + tr.y * ONE_MINUS_KAPPA90),
+                point2(rect.max_x() - tr.x * ONE_MINUS_KAPPA90, rect.min_y()),
+            );
+
+            self.line_to(point2(rect.min_x() + tl.x, rect.min_y()));
+            self.bezier_to(
+                point2(rect.min_x(), rect.min_y() + tl.y),
+                point2(rect.min_x() + tl.x * ONE_MINUS_KAPPA90, rect.min_y()),
+                point2(rect.min_x(), rect.min_y() + tl.y * ONE_MINUS_KAPPA90),
+            );
+
+            self.close_path();
+        }
+    }
+
+    pub fn circle(&mut self, center: impl Into<Point2D<f32>>, radius: f32) {
+        self.ellipse(center, radius, radius);
+    }
+
+    pub fn ellipse(&mut self, center: impl Into<Point2D<f32>>, rx: f32, ry: f32) {
+        let center: Point2D<f32> = center.into();
+
+        self.move_to(point2(center.x - rx, center.y));
+        self.bezier_to(
+            point2(center.x, center.y + ry),
+            point2(center.x - rx, center.y + ry * KAPPA90),
+            point2(center.x - rx * KAPPA90, center.y + ry),
+        );
+        self.bezier_to(
+            point2(center.x + rx, center.y),
+            point2(center.x + rx * KAPPA90, center.y + ry),
+            point2(center.x + rx, center.y + ry * KAPPA90),
+        );
+        self.bezier_to(
+            point2(center.x, center.y - ry),
+            point2(center.x + rx, center.y - ry * KAPPA90),
+            point2(center.x + rx * KAPPA90, center.y - ry),
+        );
+        self.bezier_to(
+            point2(center.x - rx, center.y),
+            point2(center.x - rx * KAPPA90, center.y - ry),
+            point2(center.x - rx, center.y - ry * KAPPA90),
+        );
+        self.close_path();
+    }
+
+    pub fn fill(&mut self) {
+        let mut fill_paint = self.state().fill;
+
+        self.flatten_paths();
+
+        if self.state().shape_anti_alias {
+            self.expand_fill(self.fringe_width, LineCap::Miter, 2.4);
+        } else {
+            self.expand_fill(0.0, LineCap::Miter, 2.4);
+        }
+
+        let state = self.state();
+
+        // Apply global alpha
+        fill_paint.inner_color.a *= state.alpha;
+        fill_paint.outer_color.a *= state.alpha;
+
+        // render fill
+
+        // Count triangles
+        for path in self.cache.paths.iter() {
+            self.fill_tri_count += path.num_fill_verts - 2;
+            self.fill_tri_count += path.num_stroke_verts - 2;
+            self.draw_call_count += 2;
+        }
+    }
+
+    pub fn stroke(&mut self) {
+        let state = self.state();
+
+        let scale = transform_average_scale(&state.xform);
+        let mut stroke_width = (state.stroke_width * scale).clamp(0.0, 200.0);
+        let mut stroke_paint = state.stroke;
+
+        if stroke_width < self.fringe_width {
+            // If the stroke width is less than pixel size, use alpha to emulate coverage.
+            // Since coverage is area, scale by alpha*alpha.
+            let alpha = (stroke_width / self.fringe_width).clamp(0.0, 1.0);
+            stroke_paint.inner_color.a *= alpha * alpha;
+            stroke_paint.outer_color.a *= alpha * alpha;
+            stroke_width = self.fringe_width;
+        }
+
+        // Apply global alpha
+        stroke_paint.inner_color.a *= state.alpha;
+        stroke_paint.outer_color.a *= state.alpha;
+
+        self.flatten_paths();
+
+        let state = self.state();
+
+        if state.shape_anti_alias {
+            self.expand_stroke(
+                stroke_width * 0.5,
+                self.fringe_width,
+                state.line_cap,
+                state.line_join,
+                state.miter_limit,
+            );
+        } else {
+            self.expand_stroke(
+                stroke_width * 0.5,
+                0.0,
+                state.line_cap,
+                state.line_join,
+                state.miter_limit,
+            );
+        }
+
+        // render stroke
+
+        // Count triangles
+        for path in self.cache.paths.iter() {
+            self.stroke_tri_count += path.num_stroke_verts - 2;
+            self.draw_call_count += 1;
+        }
     }
 
     fn clear_path_cache(&mut self) {
@@ -452,7 +813,7 @@ impl Context {
         path.num_points += 1;
     }
 
-    fn close_path(&mut self) {
+    fn _close_path(&mut self) {
         let Some(path) = self.cache.paths.last_mut() else {
             return;
         };
@@ -460,7 +821,7 @@ impl Context {
         path.closed = true;
     }
 
-    fn path_winding(&mut self, winding: Winding) {
+    fn _path_winding(&mut self, winding: Winding) {
         let Some(path) = self.cache.paths.last_mut() else {
             return;
         };
@@ -537,10 +898,10 @@ impl Context {
                     }
                 }
                 Command::Close => {
-                    self.close_path();
+                    self._close_path();
                 }
                 Command::Winding(winding) => {
-                    self.path_winding(winding);
+                    self._path_winding(winding);
                 }
             }
         }
@@ -936,10 +1297,6 @@ impl Context {
     }
 }
 
-fn cross(dx0: f32, dy0: f32, dx1: f32, dy1: f32) -> f32 {
-    (dx1 * dy0) - (dx0 * dy1)
-}
-
 fn normalize(p: &mut Vector2D<f32>) -> f32 {
     let d = ((p.x * p.x) + (p.y * p.y)).sqrt();
     if d > 1e-6 {
@@ -1244,5 +1601,13 @@ fn round_cap_end(
 
         dst.push(vert(p.pos, UV_HALF_1));
         dst.push(vert(p.pos - (dl * ax) + (delta * ay), point2(u0, 1.0)));
+    }
+}
+
+fn sign_of(x: f32) -> f32 {
+    if x >= 0.0 {
+        1.0
+    } else {
+        -1.0
     }
 }

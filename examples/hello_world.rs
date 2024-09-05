@@ -55,7 +55,7 @@ impl ApplicationHandler for MyApp {
                     .device
                     .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
                 {
-                    let _rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: None,
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                             view: &view,
@@ -69,6 +69,8 @@ impl ApplicationHandler for MyApp {
                         timestamp_writes: None,
                         occlusion_query_set: None,
                     });
+
+                    state.test_renderer.render(&mut render_pass);
                 }
 
                 state.queue.submit(Some(encoder.finish()));
@@ -89,6 +91,8 @@ impl ApplicationHandler for MyApp {
 }
 
 struct State {
+    test_renderer: rootvg::pipeline::Renderer,
+
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -142,12 +146,20 @@ impl State {
 
         println!("{:?}", &surface_config);
 
+        let test_renderer = rootvg::pipeline::Renderer::new(
+            &device,
+            &queue,
+            surface_config.format,
+            wgpu::MultisampleState::default(),
+        );
+
         Self {
             surface,
             device,
             queue,
             surface_config,
             window,
+            test_renderer,
         }
     }
 }
