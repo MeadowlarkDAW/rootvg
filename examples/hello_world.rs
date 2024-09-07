@@ -1,3 +1,4 @@
+use euclid::default::Size2D;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
@@ -70,6 +71,7 @@ impl ApplicationHandler for MyApp {
                         occlusion_query_set: None,
                     });
 
+                    state.test_renderer.prepare(state.view_size, &state.queue);
                     state.test_renderer.render(&mut render_pass);
                 }
 
@@ -77,6 +79,7 @@ impl ApplicationHandler for MyApp {
                 frame.present();
             }
             WindowEvent::Resized(new_size) => {
+                state.view_size = Size2D::new(new_size.width, new_size.height);
                 state.surface_config.width = new_size.width.max(1);
                 state.surface_config.height = new_size.height.max(1);
                 state
@@ -97,6 +100,7 @@ struct State {
     device: wgpu::Device,
     queue: wgpu::Queue,
     surface_config: wgpu::SurfaceConfiguration,
+    view_size: Size2D<u32>,
     window: Arc<Window>,
 }
 
@@ -107,6 +111,7 @@ impl State {
 
     async fn new_async(window: Arc<Window>) -> Self {
         let size = window.inner_size();
+        let view_size = Size2D::new(size.width, size.height);
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -159,6 +164,7 @@ impl State {
             queue,
             surface_config,
             window,
+            view_size,
             test_renderer,
         }
     }

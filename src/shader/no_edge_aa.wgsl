@@ -1,0 +1,1 @@
+const EDGE_AA: bool = false;

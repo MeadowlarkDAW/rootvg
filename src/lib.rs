@@ -3,6 +3,7 @@ use euclid::default::{Point2D, Size2D, Transform2D};
 pub mod color;
 mod context;
 pub mod math;
+pub mod path;
 pub mod pipeline;
 
 pub use color::Color;
@@ -35,13 +36,23 @@ impl Paint {
     }
 }
 
-#[repr(i32)]
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Winding {
     /// Winding for solid shapes
-    CCW = 1,
+    CCW = 0,
     /// Winding for holes
     CW,
+}
+
+impl Winding {
+    pub fn from_u8(w: u8) -> Self {
+        if w == 0 {
+            Self::CCW
+        } else {
+            Self::CW
+        }
+    }
 }
 
 #[repr(i32)]
@@ -56,6 +67,17 @@ pub enum Solidity {
 #[repr(i32)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LineCap {
+    #[default]
+    Butt = 0,
+    Round,
+    Square,
+    Bevel,
+    Miter,
+}
+
+#[repr(i32)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum LineJoin {
     #[default]
     Butt = 0,
     Round,
@@ -239,36 +261,4 @@ impl Vertex {
 /// A shorthand for `Vertex::new(pos, uv)`
 pub const fn vert(pos: Point2D<f32>, uv: Point2D<f32>) -> Vertex {
     Vertex::new(pos, uv)
-}
-
-#[repr(C)]
-#[derive(Debug, PartialEq)]
-pub struct Path {
-    point_start_index: usize,
-    num_points: usize,
-    closed: bool,
-    num_bevels: usize,
-    fill_vert_start_index: usize,
-    num_fill_verts: usize,
-    stroke_vert_start_index: usize,
-    num_stroke_verts: usize,
-    winding: Winding,
-    convex: bool,
-}
-
-impl Path {
-    pub(crate) fn new(point_start_index: usize) -> Self {
-        Self {
-            point_start_index,
-            num_points: 0,
-            closed: false,
-            num_bevels: 0,
-            fill_vert_start_index: 0,
-            num_fill_verts: 0,
-            stroke_vert_start_index: 0,
-            num_stroke_verts: 0,
-            winding: Winding::CCW,
-            convex: false,
-        }
-    }
 }

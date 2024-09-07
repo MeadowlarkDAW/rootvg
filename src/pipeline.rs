@@ -75,8 +75,10 @@ impl Renderer {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("rootvg_shader"),
-            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!(
-                "shader.wgsl"
+            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(concat!(
+                include_str!("./shader/edge_aa.wgsl"),
+                "\n",
+                include_str!("./shader/shader.wgsl"),
             ))),
         });
 
@@ -119,6 +121,7 @@ impl Renderer {
 
     pub fn render<'pass>(&'pass self, render_pass: &mut wgpu::RenderPass<'pass>) {
         render_pass.set_bind_group(0, &self.vert_uniforms_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.frag_uniforms_bind_group, &[]);
 
         self.main_pipeline.render(render_pass);
     }
@@ -155,7 +158,6 @@ impl Pipeline {
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions {
-                    //constants: &[("edge_aa".to_owned(), false)].into(),
                     ..Default::default()
                 },
             }),
@@ -188,19 +190,19 @@ impl Pipeline {
             frag_uniforms_buffer,
             0,
             bytemuck::cast_slice(&[FragUniforms {
-                scissor_mat: Transform2D::identity().into(),
-                paint_mat: [f32; 12],
-                inner_color: Color,
-                outer_color: Color,
-                scissor_ext: [f32; 2],
-                scissor_scale: [f32; 2],
-                extent: [f32; 2],
-                radius: f32,
-                feather: f32,
-                stroke_mult: f32,
-                stroke_thr: f32,
-                text_type: u32,
-                type_: u32,
+                scissor_mat: xform_to_mat3x4(&Transform2D::identity()),
+                paint_mat: xform_to_mat3x4(&Transform2D::identity()),
+                inner_color: Color::new(0.9, 0.9, 0.9, 0.9),
+                outer_color: Color::new(0.9, 0.9, 0.9, 0.9),
+                scissor_ext: [100.0; 2],
+                scissor_scale: [1.0; 2],
+                extent: [100.0; 2],
+                radius: 1.0,
+                feather: 1.0,
+                stroke_mult: 1.0,
+                stroke_thr: 0.01,
+                text_type: 0,
+                type_: ShaderType::Color as u32,
             }]),
         );
     }
@@ -290,16 +292,33 @@ impl FragUniforms {
 fn vertices() -> Vec<Vertex> {
     vec![
         Vertex {
-            pos: [0.0, 0.5].into(),
-            uv: [0.0, 0.0].into(),
+            pos: [25.0, 50.0].into(),
+            uv: [0.5, 1.0].into(),
         },
         Vertex {
-            pos: [-0.5, -0.5].into(),
-            uv: [0.0, 0.0].into(),
+            pos: [0.0, 0.0].into(),
+            uv: [0.5, 1.0].into(),
         },
         Vertex {
-            pos: [0.5, -0.5].into(),
-            uv: [0.0, 0.0].into(),
+            pos: [50.0, 25.0].into(),
+            uv: [0.5, 1.0].into(),
         },
     ]
+}
+
+fn xform_to_mat3x4(t: &Transform2D<f32>) -> [f32; 12] {
+    [
+        t.m11, t.m12, 0.0, 0.0, t.m21, t.m22, 0.0, 0.0, t.m31, t.m32, 1.0, 0.0,
+    ]
+}
+
+#[repr(u32)]
+enum ShaderType {
+    Color = 0,
+    Gradient,
+    Image,
+    Stencil,
+    ImageGradient,
+    FilterImage,
+    TextureCopyUnclipped,
 }

@@ -31,8 +31,8 @@ struct VertexInput {
 
 struct VertexOutput {
     @builtin(position) position: vec4f,
-    ftcoord: vec2f,
-    fpos: vec2f
+    @location(0) ftcoord: vec2f,
+    @location(1) fpos: vec2f,
 }
 
 @vertex
@@ -40,85 +40,86 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
     out.position = vec4<f32>(
-        (input.pos.x * vert_uniforms.view_size_recip_2.x) - 1.0,
-        (1.0 - input.pos.y * vert_uniforms.view_size_recip_2).y,
+        (input.position.x * vert_uniforms.view_size_recip_2.x) - 1.0,
+        (1.0 - input.position.y * vert_uniforms.view_size_recip_2).y,
         0.0,
         1.0
     );
 
-    out.fpos = input.pos;
+    out.ftcoord = input.tcoord;
+    out.fpos = input.position;
+
+    return out;
 }
 
 // -----------------------------------------------------------------------------------------------
 
-const SHADER_TYPE_COLOR = 0;
-const SHADER_TYPE_GRADIENT = 1;
-const SHADER_TYPE_IMAGE = 2;
-const SHADER_TYPE_STENCIL = 3;
-const SHADER_TYPE_IMAGE_GRADIENT = 4;
-const SHADER_TYPE_FILTER_IMAGE = 5;
-const TEXTURE_COPY_UNCLIPPED = 6;
+const SHADER_TYPE_COLOR: u32 = 0;
+const SHADER_TYPE_GRADIENT: u32 = 1;
+const SHADER_TYPE_IMAGE: u32 = 2;
+const SHADER_TYPE_STENCIL: u32 = 3;
+const SHADER_TYPE_IMAGE_GRADIENT: u32 = 4;
+const SHADER_TYPE_FILTER_IMAGE: u32 = 5;
+const TEXTURE_COPY_UNCLIPPED: u32 = 6;
 
 @fragment
-fn solid_fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     var result: vec4f;
 
-    override edge_aa: bool = false;
-
     var stroke_alpha = 1.0;
-    if edge_aa {
+    if EDGE_AA {
         if frag_uniforms.type_ != TEXTURE_COPY_UNCLIPPED {
             // Stroke - from [0..1] to clipped pyramid, where the slope is 1px
             stroke_alpha = min(1.0, (1.0-abs(input.ftcoord.x*2.0-1.0))*frag_uniforms.stroke_mult)
-                * min(1.0, input.ftcoord.y)
+                * min(1.0, input.ftcoord.y);
             if stroke_alpha < frag_uniforms.stroke_thr {
                 discard;
             }
         }
     };
 
-    if input.type_ == SHADER_TYPE_COLOR {
+    if frag_uniforms.type_ == SHADER_TYPE_COLOR {
         // Plain color fill;
         result = frag_uniforms.inner_color;
-    } else if input.type_ == SHADER_TYPE_GRADIENT {
+    } else if frag_uniforms.type_ == SHADER_TYPE_GRADIENT {
         result = render_gradient(input.fpos);
-    } else if input.type_ == SHADER_TYPE_IMAGE {
+    } else if frag_uniforms.type_ == SHADER_TYPE_IMAGE {
         // todo
         discard;
-    } else if input.type_ == SHADER_TYPE_STENCIL {
+    } else if frag_uniforms.type_ == SHADER_TYPE_STENCIL {
         result = vec4<f32>(1.0, 1.0, 1.0, 1.0);
-    } else if input.type_ == SHADER_TYPE_IMAGE_GRADIENT {
+    } else if frag_uniforms.type_ == SHADER_TYPE_IMAGE_GRADIENT {
         // todo
         discard;
-    } else if input.type_ == SHADER_TYPE_FILTER_IMAGE {
+    } else if frag_uniforms.type_ == SHADER_TYPE_FILTER_IMAGE {
         // todo
         discard;
-    } else if input.type_ == TEXTURE_COPY_UNCLIPPED {
+    } else if frag_uniforms.type_ == TEXTURE_COPY_UNCLIPPED {
         // todo
         discard;
     }
 
     let scissor = scissor_mask(input.fpos);
 
-    if input.type_ != SHADER_TYPE_STENCIL && input.type_ != SHADER_TYPE_FILTER_IMAGE {
+    if frag_uniforms.type_ != SHADER_TYPE_STENCIL && frag_uniforms.type_ != SHADER_TYPE_FILTER_IMAGE {
         // Combine alpha
         result *= stroke_alpha * scissor;
     }
 
-    color
+    return result;
 }
 
 // Scissoring
 fn scissor_mask(p: vec2f) -> f32 {
-    let sc = (abs((frag_uniforms.scissor_mat * vec3f(p, 1.0)).xy) - frag_uniforms.scissor_ext);
+    var sc = (abs((frag_uniforms.scissor_mat * vec3f(p, 1.0)).xy) - frag_uniforms.scissor_ext);
 	sc = vec2f(0.5, 0.5) - sc * frag_uniforms.scissor_scale;
 	return clamp(sc.x, 0.0, 1.0) * clamp(sc.y, 0.0, 1.0);
 }
 
-fn sd_round_rect(pt: vec2f, ext: vec2f, rad: vec2f) -> f32 {
+fn sd_round_rect(pt: vec2f, ext: vec2f, rad: f32) -> f32 {
     let ext2 = ext - vec2<f32>(rad, rad);
     let d = abs(pt) - ext2;
-    return min(max(d.x,d.y), 0.0) + length(max(d, 0.0)) - rad;
+    return min(max(d.x,d.y), 0.0) + length(max(d, vec2<f32>(0.0, 0.0))) - rad;
 }
 
 fn render_gradient(fpos: vec2f) -> vec4f {
