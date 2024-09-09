@@ -1,5 +1,5 @@
 use euclid::{
-    default::{Point2D, Transform2D, Vector2D},
+    default::{Point2D, Vector2D},
     point2, vec2,
 };
 use std::f32::consts::{PI, TAU};
@@ -7,7 +7,7 @@ use vec1::Vec1;
 
 use crate::{vert, LineCap, LineJoin, Vertex, Winding};
 
-use super::{Command, CommandIterator};
+use super::{Command, MeshBuilder};
 
 const INIT_POINTS_SIZE: usize = 128;
 const INIT_PATHS_SIZE: usize = 16;
@@ -25,10 +25,8 @@ pub(crate) struct Tessellator {
 }
 
 impl Tessellator {
-    fn new(scale_factor: f32) -> Self {
-        assert!(scale_factor > 0.0);
-
-        let mut new_self = Self {
+    pub(crate) fn new() -> Self {
+        Self {
             tess_tol: 0.0,
             dist_tol: 0.0,
             scale_factor: 0.0,
@@ -38,35 +36,42 @@ impl Tessellator {
             paths: Vec1::with_capacity(PathState::new(0), INIT_PATHS_SIZE),
             bounds_tl: Point2D::default(),
             bounds_br: Point2D::default(),
-        };
+        }
+    }
 
-        new_self.set_scale_factor(scale_factor);
-
-        new_self
+    pub fn fringe_width(&self) -> f32 {
+        self.fringe_width
     }
 
     pub fn set_scale_factor(&mut self, scale_factor: f32) {
         if self.scale_factor != scale_factor {
             self.scale_factor = scale_factor;
+            self.fringe_width = scale_factor.recip();
 
-            self.tess_tol = 0.25 / scale_factor;
-            self.dist_tol = 0.01 / scale_factor;
-            self.fringe_width = 1.0 / scale_factor;
+            self.tess_tol = 0.25 * self.fringe_width;
+            self.dist_tol = 0.01 * self.fringe_width;
         }
     }
 
     pub(super) fn tessellate(
         &mut self,
-        commands: CommandIterator,
-        verts: &mut Vec<Vertex>,
+        builder: &MeshBuilder,
+        stroke_verts: &mut Vec<Vertex>,
+        fill_verts: &mut Vec<Vertex>,
         antialias: bool,
     ) {
+        let stroke_width = f32::from_ne_bytes(builder.inner.stroke_width_bytes);
+
+        if !builder.inner.fill && stroke_width <= 0.0 {
+            return;
+        }
+
         self.points.clear();
-        self.paths.truncate(1);
+        self.paths.truncate(1).unwrap();
         *self.paths.first_mut() = PathState::new(0);
 
         // flatten
-        for cmd in commands {
+        for cmd in builder.inner.command_buffer.iter() {
             match cmd {
                 Command::MoveTo(pos) => {
                     self.paths.push(PathState::new(self.points.len()));
@@ -130,8 +135,8 @@ impl Tessellator {
             // Enforce winding
             if pts.len() > 2 {
                 let area = poly_area(pts);
-                if (path.winding == Winding::CCW && area < 0.0)
-                    || (path.winding == Winding::CW && area > 0.0)
+                if (path.winding == Winding::Solid && area < 0.0)
+                    || (path.winding == Winding::Hole && area > 0.0)
                 {
                     pts.reverse();
                 }
@@ -154,6 +159,30 @@ impl Tessellator {
                 let next_pos = pts[i].pos;
                 process_pt(&mut pts[i - 1], next_pos);
             }
+        }
+
+        let fringe_width = if antialias { self.fringe_width } else { 0.0 };
+
+        let miter_limit = f32::from_ne_bytes(builder.inner.miter_limit_bytes).max(0.0);
+
+        if builder.inner.fill {
+            self.expand_fill(
+                fill_verts,
+                fringe_width,
+                builder.inner.line_join,
+                miter_limit,
+            );
+        }
+
+        if stroke_width > 0.0 {
+            self.expand_stroke(
+                stroke_verts,
+                stroke_width * 0.5,
+                fringe_width,
+                builder.inner.line_cap,
+                builder.inner.line_join,
+                miter_limit,
+            )
         }
     }
 
@@ -573,17 +602,19 @@ impl PathState {
             num_fill_verts: 0,
             stroke_vert_start_index: 0,
             num_stroke_verts: 0,
-            winding: Winding::CCW,
+            winding: Winding::Solid,
             convex: false,
         }
     }
 }
 
+/*
 fn transform_average_scale(t: &Transform2D<f32>) -> f32 {
     let sx = (t.m11 * t.m11 + t.m21 * t.m21).sqrt();
     let sy = (t.m12 * t.m12 + t.m22 * t.m22).sqrt();
     (sx + sy) * 0.5
 }
+*/
 
 fn tri_area2(a: Point2D<f32>, b: Point2D<f32>, c: Point2D<f32>) -> f32 {
     let ab = b - a;

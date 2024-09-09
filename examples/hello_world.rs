@@ -70,9 +70,6 @@ impl ApplicationHandler for MyApp {
                         timestamp_writes: None,
                         occlusion_query_set: None,
                     });
-
-                    state.test_renderer.prepare(state.view_size, &state.queue);
-                    state.test_renderer.render(&mut render_pass);
                 }
 
                 state.queue.submit(Some(encoder.finish()));
@@ -94,8 +91,6 @@ impl ApplicationHandler for MyApp {
 }
 
 struct State {
-    test_renderer: rootvg::pipeline::Renderer,
-
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -151,13 +146,6 @@ impl State {
 
         println!("{:?}", &surface_config);
 
-        let test_renderer = rootvg::pipeline::Renderer::new(
-            &device,
-            &queue,
-            surface_config.format,
-            wgpu::MultisampleState::default(),
-        );
-
         Self {
             surface,
             device,
@@ -165,7 +153,6 @@ impl State {
             surface_config,
             window,
             view_size,
-            test_renderer,
         }
     }
 }

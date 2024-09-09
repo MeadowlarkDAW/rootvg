@@ -1,9 +1,10 @@
 use euclid::{default::Point2D, point2};
+use smallvec::SmallVec;
 use std::hash::Hash;
 
 use crate::Winding;
 
-const INIT_COMMANDS_SIZE: usize = 256;
+const INIT_COMMANDS_SIZE: usize = 128;
 
 pub(super) enum Command {
     MoveTo(Point2D<f32>),
@@ -42,13 +43,13 @@ impl CommandType {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct PackedCommandBuffer {
-    pub data: Vec<u8>,
+    pub data: SmallVec<[u8; INIT_COMMANDS_SIZE]>,
 }
 
 impl PackedCommandBuffer {
     pub fn new() -> Self {
         Self {
-            data: Vec::with_capacity(INIT_COMMANDS_SIZE),
+            data: SmallVec::new(),
         }
     }
 

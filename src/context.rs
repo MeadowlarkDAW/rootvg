@@ -1,432 +1,392 @@
-use std::f32::consts::{PI, TAU};
-use std::num::NonZeroUsize;
+use std::ops::Range;
 
-use euclid::{
-    default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
-    point2, vec2, Angle,
-};
-use vec1::Vec1;
+use euclid::default::{Point2D, Size2D, Transform2D, Vector2D};
 
 use crate::{
-    vert, Align, BlendFactor, Color, CompositeOperation, CompositeOperationState, LineCap, Paint,
-    Scissor, Vertex, Winding,
+    mesh::{
+        cache::{MeshCache, MeshCacheEntry},
+        tessellator::Tessellator,
+        MeshBuilder, MeshID,
+    },
+    paint::PaintType,
+    pipeline::{ItemUniforms, Renderer, ShaderType, INIT_ITEMS_CAPACITY},
+    Paint, Vertex,
 };
 
-//const INIT_FONTIMAGE_SIZE: usize = 512;
-//const MAX_FONTIMAGE_SIZE: usize = 2048;
-//const MAX_FONTIMAGES: usize = 4;
-
-const INIT_COMMANDS_SIZE: usize = 64;
-const INIT_VERTS_SIZE: usize = 256;
-const INIT_STATES: usize = 64;
-
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
-struct State {
-    composite_operation: CompositeOperationState,
-    shape_anti_alias: bool,
-    fill: Paint,
-    stroke: Paint,
-    stroke_width: f32,
-    miter_limit: f32,
-    line_join: LineCap,
-    line_cap: LineCap,
-    alpha: f32,
-    xform: Transform2D<f32>,
-    scissor: Scissor,
-    font_size: f32,
-    letter_spacing: f32,
-    line_height: f32,
-    font_blur: f32,
-    text_align: Align,
-    font_id: i32,
-}
-
-impl State {
-    fn reset(&mut self) {
-        self.fill = Paint::new(crate::color::WHITE);
-        self.stroke = Paint::new(crate::color::BLACK);
-
-        self.composite_operation = CompositeOperation::SourceOver.state();
-        self.shape_anti_alias = true;
-        self.stroke_width = 1.0;
-        self.miter_limit = 10.0;
-        self.line_cap = LineCap::Butt;
-        self.line_join = LineCap::Miter;
-        self.alpha = 1.0;
-        self.xform = Transform2D::identity();
-
-        self.scissor = Scissor::new();
-
-        self.font_size = 16.0;
-        self.letter_spacing = 0.0;
-        self.line_height = 1.0;
-        self.font_blur = 0.0;
-        self.text_align = Align::HALIGN_LEFT | Align::VALIGN_BASELINE;
-        self.font_id = 0;
-    }
+struct ScissorUniforms {
+    mat: Transform2D<f32>,
+    ext: Size2D<f32>,
+    scale: Vector2D<f32>,
 }
 
 pub struct Context {
-    // NVGparams params;
-    commands: Vec<Command>,
-    command_pos: Point2D<f32>,
-    states: Vec1<State>,
-    cache: PathCache,
-    tess_tol: f32,
-    dist_tol: f32,
-    fringe_width: f32,
-    device_px_ratio: f32,
-    draw_call_count: usize,
-    fill_tri_count: usize,
-    stroke_tri_count: usize,
-    text_tri_count: usize,
+    mesh_cache: MeshCache,
+    mesh_builder: MeshBuilder,
+    tessellator: Tessellator,
+    renderer: Renderer,
+
+    scissor_mat: Transform2D<f32>,
+    scissor_ext: Size2D<f32>,
+    scissor_uniforms: Option<ScissorUniforms>,
+    global_alpha: f32,
+    view_physical_size: Size2D<u32>,
+    scale_factor: f32,
+    antialias: bool,
+
+    queued_items: Vec<QueuedItem>,
+    total_num_vertices: usize,
+    needs_preparing: bool,
 }
 
 impl Context {
-    pub fn new() -> Self {
-        let mut new_self = Self {
-            commands: Vec::with_capacity(INIT_COMMANDS_SIZE),
-            command_pos: Point2D::default(),
-            states: Vec1::with_capacity(State::default(), INIT_STATES),
-            cache: PathCache::new(),
-            tess_tol: 0.0,
-            dist_tol: 0.0,
-            fringe_width: 0.0,
-            device_px_ratio: 0.0,
-            draw_call_count: 0,
-            fill_tri_count: 0,
-            stroke_tri_count: 0,
-            text_tri_count: 0,
-        };
+    pub fn new(
+        device: &wgpu::Device,
+        texture_format: wgpu::TextureFormat,
+        multisample: wgpu::MultisampleState,
+        scale_factor: f32,
+        antialias: bool,
+    ) -> Self {
+        assert!(scale_factor > 0.0);
 
-        new_self.reset();
+        let mut mesh_builder = MeshBuilder::new();
+        let mut tessellator = Tessellator::new();
 
-        new_self.set_device_pixel_ratio(1.0);
+        mesh_builder.set_scale_factor(scale_factor);
+        tessellator.set_scale_factor(scale_factor);
 
-        // if (ctx->params.renderCreate(ctx->params.userPtr) == 0) goto error;
+        Self {
+            mesh_cache: MeshCache::new(),
+            mesh_builder,
+            tessellator,
+            renderer: Renderer::new(device, texture_format, multisample),
 
-        // init font rendering
+            scissor_mat: Transform2D::identity(),
+            scissor_ext: Size2D::default(),
+            scissor_uniforms: None,
+            global_alpha: 1.0,
+            view_physical_size: Size2D::default(),
+            scale_factor,
+            antialias,
 
-        // create font texture
-
-        new_self
-    }
-
-    pub fn set_device_pixel_ratio(&mut self, ratio: f32) {
-        self.tess_tol = 0.25 / ratio;
-        self.dist_tol = 0.01 / ratio;
-        self.fringe_width = 1.0 / ratio;
-        self.device_px_ratio = ratio;
-    }
-
-    pub fn begin_frame(&mut self, window_width: f32, window_height: f32, device_pixel_ratio: f32) {
-        self.states.truncate_nonzero(NonZeroUsize::new(1).unwrap());
-        self.reset();
-
-        self.set_device_pixel_ratio(device_pixel_ratio);
-
-        // ctx->params.renderViewport(ctx->params.userPtr, windowWidth, windowHeight, devicePixelRatio);
-
-        self.draw_call_count = 0;
-        self.fill_tri_count = 0;
-        self.stroke_tri_count = 0;
-        self.text_tri_count = 0;
-    }
-
-    pub fn cancel_frame(&mut self) {
-        // ctx->params.renderCancel(ctx->params.userPtr);
-    }
-
-    pub fn end_frame(&mut self) {
-        // ctx->params.renderFlush(ctx->params.userPtr);
-
-        // font stuff
-    }
-
-    pub fn save(&mut self) {
-        let last_state = *self.states.last();
-        self.states.push(last_state);
-    }
-
-    pub fn restore(&mut self) {
-        if self.states.len() > 1 {
-            self.states.pop().unwrap();
+            queued_items: Vec::with_capacity(INIT_ITEMS_CAPACITY),
+            total_num_vertices: 0,
+            needs_preparing: false,
         }
     }
 
-    pub fn reset(&mut self) {
-        self.state_mut().reset();
-    }
+    pub fn begin_frame<'a>(
+        &'a mut self,
+        view_physical_size: Size2D<u32>,
+        scale_factor: f32,
+    ) -> ContextRef<'a> {
+        assert!(view_physical_size.width > 0);
+        assert!(view_physical_size.height > 0);
+        assert!(scale_factor > 0.0);
 
-    pub fn anti_alias(&mut self, enabled: bool) {
-        self.state_mut().shape_anti_alias = enabled;
-    }
+        let force_mesh_rebuild = if self.scale_factor != scale_factor {
+            self.scale_factor = scale_factor;
 
-    pub fn stroke_width(&mut self, width: f32) {
-        self.state_mut().stroke_width = width;
-    }
+            self.mesh_builder.set_scale_factor(scale_factor);
+            self.tessellator.set_scale_factor(scale_factor);
 
-    pub fn miter_limit(&mut self, limit: f32) {
-        self.state_mut().miter_limit = limit;
-    }
-
-    pub fn line_cap(&mut self, cap: LineCap) {
-        self.state_mut().line_cap = cap;
-    }
-
-    pub fn line_join(&mut self, join: LineCap) {
-        self.state_mut().line_join = join;
-    }
-
-    pub fn global_alpha(&mut self, alpha: f32) {
-        self.state_mut().alpha = alpha;
-    }
-
-    pub fn transform(&mut self, t: &Transform2D<f32>) {
-        let state = self.state_mut();
-        state.xform = t.then(&state.xform);
-    }
-
-    pub fn reset_transform(&mut self) {
-        self.state_mut().xform = Transform2D::identity();
-    }
-
-    pub fn translate(&mut self, v: impl Into<Vector2D<f32>>) {
-        let state = self.state_mut();
-        state.xform = state.xform.pre_translate(v.into());
-    }
-
-    pub fn rotate(&mut self, angle: impl Into<Angle<f32>>) {
-        let state = self.state_mut();
-        state.xform = state.xform.pre_rotate(angle.into());
-    }
-
-    pub fn skew_x(&mut self, angle: impl Into<Angle<f32>>) {
-        let state = self.state_mut();
-        state.xform = crate::math::transform_skew_x(angle.into()).then(&state.xform);
-    }
-
-    pub fn skew_y(&mut self, angle: impl Into<Angle<f32>>) {
-        let state = self.state_mut();
-        state.xform = crate::math::transform_skew_y(angle.into()).then(&state.xform);
-    }
-
-    pub fn scale(&mut self, x: f32, y: f32) {
-        let state = self.state_mut();
-        state.xform = state.xform.pre_scale(x, y);
-    }
-
-    pub fn current_transform(&self) -> &Transform2D<f32> {
-        &self.state().xform
-    }
-
-    pub fn stroke_color(&mut self, color: impl Into<Color>) {
-        self.state_mut().stroke = Paint::new(color);
-    }
-
-    pub fn stroke_paint(&mut self, paint: Paint) {
-        let state = self.state_mut();
-        state.stroke = paint;
-        state.stroke.xform = state.stroke.xform.then(&state.xform);
-    }
-
-    pub fn fill_color(&mut self, color: impl Into<Color>) {
-        self.state_mut().fill = Paint::new(color);
-    }
-
-    pub fn fill_paint(&mut self, paint: Paint) {
-        let state = self.state_mut();
-        state.fill = paint;
-        state.fill.xform = state.fill.xform.then(&state.xform);
-    }
-
-    pub fn scissor(&mut self, rect: impl Into<Rect<f32>>) {
-        let state = self.state_mut();
-
-        let mut rect: Rect<f32> = rect.into();
-
-        rect.size.width = rect.size.width.max(0.0);
-        rect.size.height = rect.size.height.max(0.0);
-
-        state.scissor.xform = Transform2D::identity();
-        state.scissor.xform.m31 = rect.min_x() + rect.width() * 0.5;
-        state.scissor.xform.m32 = rect.min_y() + rect.height() * 0.5;
-        state.scissor.xform = state.scissor.xform.then(&state.xform);
-
-        state.scissor.extent = Size2D::new(rect.width() * 0.5, rect.height() * 0.5)
-    }
-
-    // TODO: Custom error
-    pub fn intersect_scissor(&mut self, rect: impl Into<Rect<f32>>) -> Result<(), ()> {
-        let state = self.state_mut();
-
-        let rect: Rect<f32> = rect.into();
-
-        // If no previous scissor has been set, set the scissor as current scissor.
-        if state.scissor.extent.width < 0.0 {
-            self.scissor(rect);
-            return Ok(());
-        }
-
-        // Transform the current scissor rect into current transform space.
-        // If there is difference in rotation, this will be approximation.
-        let mut p_xform = state.scissor.xform;
-        let ex = state.scissor.extent.width;
-        let ey = state.scissor.extent.height;
-        let Some(inv_xform) = state.xform.inverse() else {
-            return Err(());
-        };
-        p_xform = p_xform.then(&inv_xform);
-        let tex = ex * p_xform.m11.abs() + ey * p_xform.m21.abs();
-        let tey = ex * p_xform.m12.abs() + ey * p_xform.m22.abs();
-
-        let Some(intersection_rect) = rect.intersection(&Rect::new(
-            point2(p_xform.m31 - tex, p_xform.m32 - tey),
-            Size2D::new(tex * 2.0, tey * 2.0),
-        )) else {
-            return Err(());
-        };
-
-        self.scissor(intersection_rect);
-
-        Ok(())
-    }
-
-    pub fn reset_scissor(&mut self) {
-        self.state_mut().scissor = Scissor::new();
-    }
-
-    pub fn global_composite_operation(&mut self, op: CompositeOperation) {
-        self.state_mut().composite_operation = op.state();
-    }
-
-    pub fn global_composite_blend_func(
-        &mut self,
-        src_factor: BlendFactor,
-        dst_factor: BlendFactor,
-    ) {
-        self.global_composite_blend_func_separate(src_factor, src_factor, dst_factor, dst_factor);
-    }
-
-    pub fn global_composite_blend_func_separate(
-        &mut self,
-        src_rgb: BlendFactor,
-        dst_rgb: BlendFactor,
-        src_alpha: BlendFactor,
-        dst_alpha: BlendFactor,
-    ) {
-        self.state_mut().composite_operation = CompositeOperationState {
-            src_rgb,
-            dst_rgb,
-            src_alpha,
-            dst_alpha,
-        };
-    }
-
-    pub fn begin_path(&mut self) {
-        self.commands.clear();
-        self.clear_path_cache();
-    }
-
-    pub fn close_path(&mut self) {
-        self.commands.push(Command::Close);
-    }
-
-    pub fn path_winding(&mut self, dir: Winding) {
-        self.commands.push(Command::Winding(dir));
-    }
-
-    pub fn fill(&mut self) {
-        let mut fill_paint = self.state().fill;
-
-        self.flatten_paths();
-
-        if self.state().shape_anti_alias {
-            self.expand_fill(self.fringe_width, LineCap::Miter, 2.4);
+            true
         } else {
-            self.expand_fill(0.0, LineCap::Miter, 2.4);
-        }
+            false
+        };
 
-        let state = self.state();
+        self.mesh_cache.begin_frame();
+        self.queued_items.clear();
+        self.total_num_vertices = 0;
+        self.needs_preparing = true;
+        self.view_physical_size = view_physical_size;
 
-        // Apply global alpha
-        fill_paint.inner_color.a *= state.alpha;
-        fill_paint.outer_color.a *= state.alpha;
-
-        // render fill
-
-        // Count triangles
-        for path in self.cache.paths.iter() {
-            self.fill_tri_count += path.num_fill_verts - 2;
-            self.fill_tri_count += path.num_stroke_verts - 2;
-            self.draw_call_count += 2;
+        ContextRef {
+            r: self,
+            force_mesh_rebuild,
         }
     }
 
-    pub fn stroke(&mut self) {
-        let state = self.state();
+    fn build_mesh_cached(
+        &mut self,
+        f: impl FnOnce(&mut MeshBuilder),
+        force_rebuild: bool,
+    ) -> MeshID {
+        self.mesh_builder.clear();
 
-        let scale = transform_average_scale(&state.xform);
-        let mut stroke_width = (state.stroke_width * scale).clamp(0.0, 200.0);
-        let mut stroke_paint = state.stroke;
+        (f)(&mut self.mesh_builder);
 
-        if stroke_width < self.fringe_width {
-            // If the stroke width is less than pixel size, use alpha to emulate coverage.
-            // Since coverage is area, scale by alpha*alpha.
-            let alpha = (stroke_width / self.fringe_width).clamp(0.0, 1.0);
-            stroke_paint.inner_color.a *= alpha * alpha;
-            stroke_paint.outer_color.a *= alpha * alpha;
-            stroke_width = self.fringe_width;
-        }
+        self.mesh_cache.build_mesh_cached(
+            &mut self.tessellator,
+            &mut self.mesh_builder,
+            self.antialias,
+            force_rebuild,
+        )
+    }
 
-        // Apply global alpha
-        stroke_paint.inner_color.a *= state.alpha;
-        stroke_paint.outer_color.a *= state.alpha;
+    fn build_mesh_uncached(
+        &mut self,
+        f: impl FnOnce(&mut MeshBuilder),
+        prev_mesh_id: &mut Option<MeshID>,
+    ) -> MeshID {
+        self.mesh_builder.clear();
 
-        self.flatten_paths();
+        (f)(&mut self.mesh_builder);
 
-        let state = self.state();
+        self.mesh_cache.build_mesh_uncached(
+            &mut self.tessellator,
+            &mut self.mesh_builder,
+            self.antialias,
+            prev_mesh_id,
+        )
+    }
 
-        if state.shape_anti_alias {
-            self.expand_stroke(
-                stroke_width * 0.5,
-                self.fringe_width,
-                state.line_cap,
-                state.line_join,
-                state.miter_limit,
-            );
+    fn fill_mesh_with_offset(&mut self, mesh_id: MeshID, paint: &Paint, offset: Vector2D<f32>) {
+        let Some(mesh) = self.mesh_cache.get_mut(mesh_id) else {
+            return;
+        };
+
+        let (vert_range, copy_verts) = if let Some(vert_range) = mesh.fill_vert_range.clone() {
+            (vert_range, false)
         } else {
-            self.expand_stroke(
-                stroke_width * 0.5,
-                0.0,
-                state.line_cap,
-                state.line_join,
-                state.miter_limit,
+            if mesh.fill_verts.is_empty() {
+                return;
+            }
+
+            let vert_range =
+                self.total_num_vertices..self.total_num_vertices + mesh.fill_verts.len();
+            mesh.fill_vert_range = Some(vert_range.clone());
+
+            self.total_num_vertices += mesh.fill_verts.len();
+
+            (vert_range, true)
+        };
+
+        self.queue_mesh(mesh_id, vert_range, paint, offset, false, 0.0, copy_verts);
+    }
+
+    fn stroke_mesh_with_offset(&mut self, mesh_id: MeshID, paint: &Paint, offset: Vector2D<f32>) {
+        let Some(mesh) = self.mesh_cache.get_mut(mesh_id) else {
+            return;
+        };
+
+        let (vert_range, copy_verts) = if let Some(vert_range) = mesh.stroke_vert_range.clone() {
+            (vert_range, false)
+        } else {
+            if mesh.stroke_verts.is_empty() {
+                return;
+            }
+
+            let vert_range =
+                self.total_num_vertices..self.total_num_vertices + mesh.stroke_verts.len();
+            mesh.stroke_vert_range = Some(vert_range.clone());
+
+            self.total_num_vertices += mesh.stroke_verts.len();
+
+            (vert_range, true)
+        };
+
+        let stroke_width = mesh.stroke_width;
+        self.queue_mesh(
+            mesh_id,
+            vert_range,
+            paint,
+            offset,
+            true,
+            stroke_width,
+            copy_verts,
+        );
+    }
+
+    fn queue_mesh(
+        &mut self,
+        mesh_id: MeshID,
+        vert_range: Range<usize>,
+        paint: &Paint,
+        offset: Vector2D<f32>,
+        is_stroke: bool,
+        mut stroke_width: f32,
+        copy_verts: bool,
+    ) {
+        let fringe_width = self.tessellator.fringe_width();
+
+        let (stroke_mult, stroke_thr, alpha_mult) = if is_stroke {
+            let alpha_mult = if stroke_width < fringe_width {
+                // If the stroke width is less than pixel size, use alpha to emulate coverage.
+                // Since coverage is area, scale by alpha*alpha.
+                let alpha = (stroke_width * self.scale_factor).clamp(0.0, 1.0);
+                stroke_width = fringe_width;
+
+                alpha * alpha
+            } else {
+                1.0
+            };
+
+            let stroke_mult = (stroke_width * 0.5 + fringe_width * 0.5) * self.scale_factor;
+
+            let stroke_thr = 1.0 - 0.5 / 255.0;
+
+            (stroke_mult, stroke_thr, alpha_mult)
+        } else {
+            (1.0, -1.0, 1.0)
+        };
+
+        let alpha_mult = alpha_mult * self.global_alpha;
+
+        let scissor_uniforms = if let Some(s) = &self.scissor_uniforms {
+            s
+        } else {
+            self.scissor_uniforms = Some(
+                if self.scissor_ext.width < -0.5 || self.scissor_ext.height < -0.5 {
+                    ScissorUniforms {
+                        mat: Transform2D::identity(),
+                        ext: Size2D::new(1.0, 1.0),
+                        scale: Vector2D::new(1.0, 1.0),
+                    }
+                } else {
+                    ScissorUniforms {
+                        mat: self.scissor_mat.inverse().unwrap(),
+                        ext: self.scissor_ext,
+                        scale: Vector2D::new(
+                            (self.scissor_mat.m11 * self.scissor_mat.m11
+                                + self.scissor_mat.m21 * self.scissor_mat.m21)
+                                .sqrt()
+                                * self.scale_factor,
+                            (self.scissor_mat.m12 * self.scissor_mat.m12
+                                + self.scissor_mat.m22 * self.scissor_mat.m22)
+                                .sqrt()
+                                * self.scale_factor,
+                        ),
+                    }
+                },
             );
+
+            self.scissor_uniforms.as_ref().unwrap()
+        };
+
+        let uniforms = match paint.paint_type {
+            PaintType::SolidColor(mut color) => {
+                color.a *= alpha_mult;
+
+                // Premultiply color
+                color.r *= color.a;
+                color.g *= color.a;
+                color.b *= color.a;
+
+                ItemUniforms::new(
+                    &scissor_uniforms.mat,
+                    &paint.transform,
+                    color,
+                    crate::color::TRANSPARENT,
+                    scissor_uniforms.ext,
+                    scissor_uniforms.scale,
+                    Size2D::default(),
+                    offset,
+                    0.0,
+                    0.0,
+                    stroke_mult,
+                    stroke_thr,
+                    0,
+                    ShaderType::Color,
+                )
+            }
+            PaintType::Gradient {
+                inner_color,
+                outer_color,
+                extent,
+                radius,
+                feather,
+            } => {
+                todo!()
+            }
+            PaintType::Image { image_id, extent } => {
+                todo!()
+            }
+        };
+
+        self.queued_items.push(QueuedItem {
+            mesh_id,
+            is_stroke,
+            vert_range,
+            uniforms,
+            copy_verts,
+        });
+    }
+
+    pub fn prepare(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        if !self.needs_preparing {
+            return;
         }
+        self.needs_preparing = false;
 
-        // render stroke
-
-        // Count triangles
-        for path in self.cache.paths.iter() {
-            self.stroke_tri_count += path.num_stroke_verts - 2;
-            self.draw_call_count += 1;
-        }
+        self.renderer.prepare(
+            device,
+            queue,
+            self.view_physical_size,
+            &self.queued_items,
+            &self.mesh_cache,
+            self.total_num_vertices,
+        );
     }
 
-    fn clear_path_cache(&mut self) {
-        self.cache.clear();
+    pub fn render<'pass>(&'pass self, render_pass: &mut wgpu::RenderPass<'pass>) {
+        self.renderer.render(render_pass, &self.queued_items);
+    }
+}
+
+pub struct ContextRef<'a> {
+    r: &'a mut Context,
+    force_mesh_rebuild: bool,
+}
+
+impl<'a> ContextRef<'a> {
+    pub fn build_mesh(&mut self, f: impl FnOnce(&mut MeshBuilder)) -> MeshID {
+        self.r.build_mesh_cached(f, self.force_mesh_rebuild)
     }
 
-    fn flatten_paths(&mut self) {}
-
-    #[inline]
-    fn state(&self) -> &State {
-        self.states.last()
+    pub fn build_mesh_uncached(
+        &mut self,
+        f: impl FnOnce(&mut MeshBuilder),
+        prev_mesh_id: &mut Option<MeshID>,
+    ) -> MeshID {
+        self.r.build_mesh_uncached(f, prev_mesh_id)
     }
 
-    #[inline]
-    fn state_mut(&mut self) -> &mut State {
-        self.states.last_mut()
+    pub fn fill_mesh(&mut self, mesh_id: MeshID, paint: &Paint) {
+        self.r
+            .fill_mesh_with_offset(mesh_id, paint, Vector2D::zero());
     }
+
+    pub fn stroke_mesh(&mut self, mesh_id: MeshID, paint: &Paint) {
+        self.r
+            .stroke_mesh_with_offset(mesh_id, paint, Vector2D::zero());
+    }
+
+    pub fn fill_mesh_with_offset(&mut self, mesh_id: MeshID, paint: &Paint, offset: Vector2D<f32>) {
+        self.r.fill_mesh_with_offset(mesh_id, paint, offset);
+    }
+
+    pub fn stroke_mesh_with_offset(
+        &mut self,
+        mesh_id: MeshID,
+        paint: &Paint,
+        offset: Vector2D<f32>,
+    ) {
+        self.r.stroke_mesh_with_offset(mesh_id, paint, offset);
+    }
+
+    pub fn set_global_alpha(&mut self, alpha: f32) {
+        self.r.global_alpha = alpha.clamp(0.0, 1.0);
+    }
+
+    pub fn global_alpha(&self) -> f32 {
+        self.r.global_alpha
+    }
+}
+
+pub(crate) struct QueuedItem {
+    pub mesh_id: MeshID,
+    pub is_stroke: bool,
+    pub vert_range: Range<usize>,
+    pub uniforms: ItemUniforms,
+    pub copy_verts: bool,
 }

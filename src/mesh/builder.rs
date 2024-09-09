@@ -5,47 +5,64 @@ use euclid::{
 use std::f32::consts::{PI, TAU};
 use std::hash::Hash;
 
-use crate::{LineCap, Winding};
+use crate::{LineCap, LineJoin, Winding};
 
-use super::{CommandIterator, PackedCommandBuffer, Path, KAPPA90, ONE_MINUS_KAPPA90};
+use super::{PackedCommandBuffer, DEFAULT_MITER_LIMIT, KAPPA90, ONE_MINUS_KAPPA90};
 
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub(super) struct PathBuilderInner {
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(super) struct MeshBuilderInner {
     pub command_buffer: PackedCommandBuffer,
+    pub stroke_width_bytes: [u8; 4],
+    pub miter_limit_bytes: [u8; 4],
+    pub line_join: LineJoin,
+    pub line_cap: LineCap,
+    pub fill: bool,
     pub antialias: bool,
 }
 
-impl PathBuilderInner {
-    pub fn iter_commands<'a>(&'a self) -> CommandIterator<'a> {
-        CommandIterator {
-            data: &self.command_buffer.data,
-            curr: 0,
-        }
+impl MeshBuilderInner {
+    fn clear(&mut self) {
+        self.command_buffer.data.clear();
+        self.stroke_width_bytes = 0.0_f32.to_ne_bytes();
+        self.miter_limit_bytes = DEFAULT_MITER_LIMIT.to_ne_bytes();
+        self.fill = true;
+        self.antialias = true;
     }
 }
 
-pub struct PathBuilder {
-    pub(super) inner: PathBuilderInner,
+pub struct MeshBuilder {
+    pub(super) inner: MeshBuilderInner,
     pos: Point2D<f32>,
     xform: Option<Transform2D<f32>>,
     dist_tol: f32,
 }
 
-impl PathBuilder {
-    pub(crate) fn new(start_pos: Point2D<f32>, dist_tol: f32) -> Self {
-        let mut command_buffer = PackedCommandBuffer::new();
-
-        command_buffer.move_to(start_pos);
-
+impl MeshBuilder {
+    pub(crate) fn new() -> Self {
         Self {
-            inner: PathBuilderInner {
-                command_buffer,
+            inner: MeshBuilderInner {
+                command_buffer: PackedCommandBuffer::new(),
+                stroke_width_bytes: 0.0_f32.to_ne_bytes(),
+                miter_limit_bytes: DEFAULT_MITER_LIMIT.to_ne_bytes(),
+                line_join: LineJoin::default(),
+                line_cap: LineCap::default(),
+                fill: true,
                 antialias: true,
             },
-            pos: start_pos,
+            pos: Point2D::default(),
             xform: None,
-            dist_tol,
+            dist_tol: 0.0,
         }
+    }
+
+    pub(crate) fn set_scale_factor(&mut self, scale_factor: f32) {
+        self.dist_tol = 0.01 / scale_factor;
+    }
+
+    pub fn clear(&mut self) {
+        self.inner.clear();
+        self.pos = Point2D::default();
+        self.xform = None;
     }
 
     pub fn move_to(&mut self, pos: impl Into<Point2D<f32>>) {
@@ -235,7 +252,7 @@ impl PathBuilder {
             );
             let a0 = d0.x.atan2(-d0.y);
             let a1 = (-d1.x).atan2(d1.y);
-            (center, a0, a1, Winding::CW)
+            (center, a0, a1, Winding::Hole)
         } else {
             let center = point2(
                 p1.x + d0.x * d - d0.y * radius,
@@ -243,7 +260,7 @@ impl PathBuilder {
             );
             let a0 = (-d0.x).atan2(d0.y);
             let a1 = d1.x.atan2(-d1.y);
-            (center, a0, a1, Winding::CCW)
+            (center, a0, a1, Winding::Solid)
         };
 
         self.arc(center, Angle::radians(a0), Angle::radians(a1), radius, dir);
@@ -275,7 +292,7 @@ impl PathBuilder {
 
         // Clamp angles
         let mut da = angle_1 - angle_0;
-        if dir == Winding::CW {
+        if dir == Winding::Hole {
             if da.radians.abs() >= TAU {
                 da.radians = TAU;
             } else {
@@ -299,7 +316,7 @@ impl PathBuilder {
         let hda = (da / num_divs as f32) * 0.5;
 
         let mut kappa = (4.0 / 3.0 * (1.0 - hda.radians.cos()) / hda.radians.sin()).abs();
-        if dir == Winding::CCW {
+        if dir == Winding::Solid {
             kappa = -kappa;
         }
 
@@ -428,16 +445,28 @@ impl PathBuilder {
         self.xform.unwrap_or(Transform2D::default())
     }
 
+    pub fn line_join(&mut self, line_join: LineJoin) {
+        self.inner.line_join = line_join;
+    }
+
+    pub fn line_cap(&mut self, line_cap: LineCap) {
+        self.inner.line_cap = line_cap;
+    }
+
     pub fn antialias(&mut self, antialias: bool) {
         self.inner.antialias = antialias;
     }
 
-    pub fn build_cached(mut self) -> Path {
-        todo!()
+    pub fn stroke_width(&mut self, stroke_width: f32) {
+        self.inner.stroke_width_bytes = stroke_width.to_ne_bytes();
     }
 
-    pub fn build_uncached(mut self) -> Path {
-        todo!()
+    pub fn fill(&mut self, fill: bool) {
+        self.inner.fill = fill;
+    }
+
+    pub fn miter_limit(&mut self, miter_limit: f32) {
+        self.inner.miter_limit_bytes = miter_limit.to_ne_bytes();
     }
 }
 

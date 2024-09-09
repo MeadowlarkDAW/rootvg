@@ -1,17 +1,27 @@
-use euclid::default::{Size2D, Transform2D};
-use wgpu::util::DeviceExt;
+use std::num::NonZero;
 
-use crate::{Color, Vertex};
+use euclid::default::{Size2D, Transform2D, Vector2D};
 
-pub struct Renderer {
+use crate::{context::QueuedItem, mesh::cache::MeshCache, Color, Vertex};
+
+pub(crate) const INIT_VERTICES_CAPACITY: usize = 2048;
+pub(crate) const INIT_ITEMS_CAPACITY: usize = 64;
+
+pub(crate) struct Renderer {
     main_pipeline: Pipeline,
 
     pipeline_layout: wgpu::PipelineLayout,
     shader: wgpu::ShaderModule,
+
     vert_uniforms_buffer: wgpu::Buffer,
     vert_uniforms_bind_group: wgpu::BindGroup,
-    frag_uniforms_buffer: wgpu::Buffer,
-    frag_uniforms_bind_group: wgpu::BindGroup,
+
+    item_uniforms_buffer: wgpu::Buffer,
+    item_uniforms_bind_group: wgpu::BindGroup,
+    item_uniforms_capacity: usize,
+
+    vertex_buffer: wgpu::Buffer,
+    vertex_buffer_capacity: usize,
 
     prev_view_size: Size2D<u32>,
 }
@@ -19,7 +29,6 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
         texture_format: wgpu::TextureFormat,
         multisample: wgpu::MultisampleState,
     ) -> Self {
@@ -29,15 +38,15 @@ impl Renderer {
                 entries: &[VertUniforms::entry()],
             });
 
-        let frag_uniforms_layout =
+        let item_uniforms_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("rootvg_fragment_uniforms_layout"),
-                entries: &[FragUniforms::entry()],
+                label: Some("rootvg_item_uniforms_layout"),
+                entries: &[ItemUniforms::entry()],
             });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("rootvg_pipeline_layout"),
-            bind_group_layouts: &[&vert_uniforms_layout, &frag_uniforms_layout],
+            bind_group_layouts: &[&vert_uniforms_layout, &item_uniforms_layout],
             push_constant_ranges: &[],
         });
 
@@ -57,19 +66,20 @@ impl Renderer {
             }],
         });
 
-        let frag_uniforms_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rootvg_fragment_uniforms_buffer"),
-            size: std::mem::size_of::<FragUniforms>() as wgpu::BufferAddress,
+        let item_uniforms_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("rootvg_item_uniforms_buffer"),
+            size: (std::mem::size_of::<ItemUniforms>() * INIT_ITEMS_CAPACITY)
+                as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        let frag_uniforms_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rootvg_fragment_uniforms_bind_group"),
-            layout: &frag_uniforms_layout,
+        let item_uniforms_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("rootvg_item_uniforms_bind_group"),
+            layout: &item_uniforms_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: frag_uniforms_buffer.as_entire_binding(),
+                resource: item_uniforms_buffer.as_entire_binding(),
             }],
         });
 
@@ -90,21 +100,42 @@ impl Renderer {
             multisample,
         );
 
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("rootvg_vertex_buffer"),
+            size: (std::mem::size_of::<Vertex>() * INIT_VERTICES_CAPACITY) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        });
+
         Self {
             main_pipeline,
 
             pipeline_layout,
             shader,
+
             vert_uniforms_buffer,
             vert_uniforms_bind_group,
-            frag_uniforms_buffer,
-            frag_uniforms_bind_group,
+
+            item_uniforms_buffer,
+            item_uniforms_bind_group,
+            item_uniforms_capacity: INIT_ITEMS_CAPACITY,
+
+            vertex_buffer,
+            vertex_buffer_capacity: INIT_VERTICES_CAPACITY,
 
             prev_view_size: Size2D::zero(),
         }
     }
 
-    pub fn prepare(&mut self, view_physical_size: Size2D<u32>, queue: &wgpu::Queue) {
+    pub fn prepare(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        view_physical_size: Size2D<u32>,
+        items: &[QueuedItem],
+        mesh_cache: &MeshCache,
+        total_num_vertices: usize,
+    ) {
         if self.prev_view_size != view_physical_size {
             self.prev_view_size = view_physical_size;
 
@@ -115,21 +146,89 @@ impl Renderer {
             );
         }
 
-        self.main_pipeline
-            .prepare(queue, &self.frag_uniforms_buffer);
+        if items.len() > self.item_uniforms_capacity {
+            let new_size = (std::mem::size_of::<ItemUniforms>() * items.len()).next_power_of_two();
+            self.item_uniforms_capacity = new_size / std::mem::size_of::<ItemUniforms>();
+
+            self.item_uniforms_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("rootvg_item_uniforms_buffer"),
+                size: new_size as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+        }
+
+        if total_num_vertices > self.vertex_buffer_capacity {
+            let new_size = (std::mem::size_of::<Vertex>() * total_num_vertices).next_power_of_two();
+            self.vertex_buffer_capacity = new_size / std::mem::size_of::<Vertex>();
+
+            self.vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("rootvg_vertex_buffer"),
+                size: new_size as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+        }
+
+        for (i, item) in items.iter().enumerate() {
+            if item.copy_verts {
+                let Some(mesh) = mesh_cache.get(item.mesh_id) else {
+                    continue;
+                };
+
+                let vertices = if item.is_stroke {
+                    &mesh.stroke_verts
+                } else {
+                    &mesh.fill_verts
+                };
+
+                if vertices.is_empty() {
+                    continue;
+                }
+
+                let mut vertex_writer = queue
+                    .write_buffer_with(
+                        &self.vertex_buffer,
+                        (item.vert_range.start * std::mem::size_of::<Vertex>())
+                            as wgpu::BufferAddress,
+                        NonZero::new((vertices.len() * std::mem::size_of::<Vertex>()) as u64)
+                            .unwrap(),
+                    )
+                    .unwrap();
+
+                vertex_writer.copy_from_slice(bytemuck::cast_slice(vertices));
+            }
+
+            let mut item_writer = queue
+                .write_buffer_with(
+                    &self.item_uniforms_buffer,
+                    (i * std::mem::size_of::<ItemUniforms>()) as wgpu::BufferAddress,
+                    NonZero::new(std::mem::size_of::<ItemUniforms>() as u64).unwrap(),
+                )
+                .unwrap();
+
+            item_writer.copy_from_slice(bytemuck::cast_slice(&[item.uniforms]));
+        }
     }
 
-    pub fn render<'pass>(&'pass self, render_pass: &mut wgpu::RenderPass<'pass>) {
+    pub fn render<'pass>(
+        &'pass self,
+        render_pass: &mut wgpu::RenderPass<'pass>,
+        items: &[QueuedItem],
+    ) {
         render_pass.set_bind_group(0, &self.vert_uniforms_bind_group, &[]);
-        render_pass.set_bind_group(1, &self.frag_uniforms_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.item_uniforms_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_pipeline(&self.main_pipeline.pipeline);
 
-        self.main_pipeline.render(render_pass);
+        for (i, item) in items.iter().enumerate() {
+            todo!()
+        }
     }
 }
 
 struct Pipeline {
     pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
 }
 
 impl Pipeline {
@@ -172,46 +271,7 @@ impl Pipeline {
             cache: None,
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&vertices()),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        Self {
-            pipeline,
-            vertex_buffer,
-        }
-    }
-
-    pub fn prepare(&mut self, queue: &wgpu::Queue, frag_uniforms_buffer: &wgpu::Buffer) {
-        // test buffer
-        queue.write_buffer(
-            frag_uniforms_buffer,
-            0,
-            bytemuck::cast_slice(&[FragUniforms {
-                scissor_mat: xform_to_mat3x4(&Transform2D::identity()),
-                paint_mat: xform_to_mat3x4(&Transform2D::identity()),
-                inner_color: Color::new(0.9, 0.9, 0.9, 0.9),
-                outer_color: Color::new(0.9, 0.9, 0.9, 0.9),
-                scissor_ext: [100.0; 2],
-                scissor_scale: [1.0; 2],
-                extent: [100.0; 2],
-                radius: 1.0,
-                feather: 1.0,
-                stroke_mult: 1.0,
-                stroke_thr: 0.01,
-                text_type: 0,
-                type_: ShaderType::Color as u32,
-            }]),
-        );
-    }
-
-    pub fn render<'pass>(&'pass self, render_pass: &mut wgpu::RenderPass<'pass>) {
-        render_pass.set_pipeline(&self.pipeline);
-
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.draw(0..3, 0..1);
+        Self { pipeline }
     }
 }
 
@@ -251,35 +311,80 @@ impl VertUniforms {
 // TODO: An option to use push constants?
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct FragUniforms {
-    scissor_mat: [f32; 12],
-    paint_mat: [f32; 12],
-    inner_color: Color,
-    outer_color: Color,
-    scissor_ext: [f32; 2],
-    scissor_scale: [f32; 2],
-    extent: [f32; 2],
-    radius: f32,
-    feather: f32,
-    stroke_mult: f32,
-    stroke_thr: f32,
-    text_type: u32,
-    type_: u32,
-    /*
+pub(crate) struct ItemUniforms {
+    pub scissor_mat: [f32; 12],
+    pub paint_mat: [f32; 12],
+    pub inner_color: Color,
+    pub outer_color: Color,
+    pub scissor_ext: [f32; 2],
+    pub scissor_scale: [f32; 2],
+    pub extent: [f32; 2],
+    pub offset: [f32; 2],
+    pub radius: f32,
+    pub feather: f32,
+    pub stroke_mult: f32,
+    pub stroke_thr: f32,
+    pub text_type: u32,
+    pub type_: u32,
+    pub has_paint_mat: u32,
     /// Dynamic offset uniforms must be 256-aligned;
     /// see: [`wgpu::Limits`] `min_uniform_buffer_offset_alignment`.
-    _padding: [f32; 20],
-    */
+    pub _padding: [u32; 17],
 }
 
-impl FragUniforms {
+impl ItemUniforms {
+    pub fn new(
+        // arrays
+        scissor_mat: &Transform2D<f32>,
+        paint_mat: &Option<Transform2D<f32>>,
+        inner_color: Color,
+        outer_color: Color,
+        scissor_ext: Size2D<f32>,
+        scissor_scale: Vector2D<f32>,
+        extent: Size2D<f32>,
+        offset: Vector2D<f32>,
+        radius: f32,
+        feather: f32,
+        stroke_mult: f32,
+        stroke_thr: f32,
+        text_type: u32,
+        type_: ShaderType,
+    ) -> Self {
+        let (paint_mat, has_paint_mat) = if let Some(paint_mat) = paint_mat {
+            (xform_to_mat3x4(&paint_mat.inverse().unwrap()), 1)
+        } else {
+            ([0.0; 12], 0)
+        };
+
+        Self {
+            scissor_mat: xform_to_mat3x4(scissor_mat),
+            paint_mat,
+            inner_color,
+            outer_color,
+            scissor_ext: scissor_ext.into(),
+            scissor_scale: scissor_scale.into(),
+            extent: extent.into(),
+            offset: offset.into(),
+            radius,
+            feather,
+            stroke_mult,
+            stroke_thr,
+            text_type,
+            type_: type_ as u32,
+            has_paint_mat,
+            // TODO: There could be a small performance gain here if these
+            // padding bytes are left unitialized.
+            _padding: [0; 17],
+        }
+    }
+
     pub fn entry() -> wgpu::BindGroupLayoutEntry {
         wgpu::BindGroupLayoutEntry {
             binding: 0,
             visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
             ty: wgpu::BindingType::Buffer {
                 ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
+                has_dynamic_offset: true,
                 min_binding_size: wgpu::BufferSize::new(
                     std::mem::size_of::<Self>() as wgpu::BufferAddress
                 ),
@@ -289,23 +394,6 @@ impl FragUniforms {
     }
 }
 
-fn vertices() -> Vec<Vertex> {
-    vec![
-        Vertex {
-            pos: [25.0, 50.0].into(),
-            uv: [0.5, 1.0].into(),
-        },
-        Vertex {
-            pos: [0.0, 0.0].into(),
-            uv: [0.5, 1.0].into(),
-        },
-        Vertex {
-            pos: [50.0, 25.0].into(),
-            uv: [0.5, 1.0].into(),
-        },
-    ]
-}
-
 fn xform_to_mat3x4(t: &Transform2D<f32>) -> [f32; 12] {
     [
         t.m11, t.m12, 0.0, 0.0, t.m21, t.m22, 0.0, 0.0, t.m31, t.m32, 1.0, 0.0,
@@ -313,7 +401,7 @@ fn xform_to_mat3x4(t: &Transform2D<f32>) -> [f32; 12] {
 }
 
 #[repr(u32)]
-enum ShaderType {
+pub(crate) enum ShaderType {
     Color = 0,
     Gradient,
     Image,

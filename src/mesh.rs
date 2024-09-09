@@ -3,14 +3,16 @@ use euclid::default::{Point2D, Vector2D};
 mod builder;
 pub(crate) mod cache;
 mod commands;
-mod tessellator;
+pub(crate) mod tessellator;
 
-use self::builder::PathBuilderInner;
+use self::builder::MeshBuilderInner;
 use self::commands::{Command, CommandIterator, PackedCommandBuffer};
 use self::tessellator::Tessellator;
 
-pub use self::builder::PathBuilder;
-pub use self::cache::Path;
+pub use self::builder::MeshBuilder;
+pub use self::cache::MeshID;
+
+pub const DEFAULT_MITER_LIMIT: f32 = 10.0;
 
 /// Length proportional to radius of a cubic bezier handle for 90deg arcs
 const KAPPA90: f32 = 0.5522847493;

@@ -3,65 +3,31 @@ use euclid::default::{Point2D, Size2D, Transform2D};
 pub mod color;
 mod context;
 pub mod math;
-pub mod path;
+pub mod mesh;
+mod paint;
 pub mod pipeline;
 
 pub use color::Color;
-pub use context::Context;
-
-#[repr(C)]
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
-pub struct Paint {
-    xform: Transform2D<f32>,
-    extent: Size2D<f32>,
-    radius: f32,
-    feather: f32,
-    inner_color: Color,
-    outer_color: Color,
-    image: i32,
-}
-
-impl Paint {
-    pub fn new(color: impl Into<Color>) -> Self {
-        let color: Color = color.into();
-        Self {
-            xform: Transform2D::identity(),
-            extent: Size2D::zero(),
-            radius: 0.0,
-            feather: 1.0,
-            inner_color: color,
-            outer_color: color,
-            image: 0,
-        }
-    }
-}
+pub use context::{Context, ContextRef};
+pub use paint::Paint;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Winding {
-    /// Winding for solid shapes
-    CCW = 0,
-    /// Winding for holes
-    CW,
+    /// Winding for solid shapes (CCW)
+    Solid = 0,
+    /// Winding for holes (CW)
+    Hole,
 }
 
 impl Winding {
-    pub fn from_u8(w: u8) -> Self {
+    pub(crate) fn from_u8(w: u8) -> Self {
         if w == 0 {
-            Self::CCW
+            Self::Solid
         } else {
-            Self::CW
+            Self::Hole
         }
     }
-}
-
-#[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Solidity {
-    /// CCW
-    Solid = 1,
-    /// CW
-    Hole,
 }
 
 #[repr(i32)]
@@ -234,7 +200,7 @@ impl Scissor {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     pub pos: Point2D<f32>,
     pub uv: Point2D<f32>,
