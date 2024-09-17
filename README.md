@@ -8,6 +8,12 @@
 [![Crates.io](https://img.shields.io/crates/v/rootvg.svg)](https://crates.io/crates/rootvg)
 [![License](https://img.shields.io/crates/l/rootvg.svg)](https://github.com/MeadowlarkDAW/rootvg/blob/main/LICENSE)
 
+> I've decided to abandon this nanovg port. This has ended up being a lot more difficult than I thought, and I've discovered that there are some big compatibility issues like triangle fans not being supported in wgpu. This is definitely more work than it's worth.
+>
+> Additionally, I've discovered that I may be able to just use the `epaint` crate from the `egui` library for my GUI library. I'll experiment with that some more.
+>
+>I'll keep this `nanovg_rewrite` branch around for anyone's reference if they want to try creating a nanovg-like renderer for wgpu.
+
 A 2D vector graphics library optimized for GUIs, written in Rust and [wgpu](https://github.com/gfx-rs/wgpu)
 
 <img src="assets/screenshot.png"/>
