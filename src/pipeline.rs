@@ -2,7 +2,7 @@ use std::num::NonZero;
 
 use euclid::default::{Size2D, Transform2D, Vector2D};
 
-use crate::{context::QueuedItem, mesh::cache::MeshCache, Color, Vertex};
+use crate::{context::QueuedDrawingCommand, mesh::cache::MeshCache, Color, Vertex};
 
 pub(crate) const INIT_VERTICES_CAPACITY: usize = 2048;
 pub(crate) const INIT_ITEMS_CAPACITY: usize = 64;
@@ -79,7 +79,11 @@ impl Renderer {
             layout: &item_uniforms_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: item_uniforms_buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &item_uniforms_buffer,
+                    offset: 0,
+                    size: Some(NonZero::new(std::mem::size_of::<ItemUniforms>() as u64).unwrap()),
+                }),
             }],
         });
 
@@ -103,7 +107,7 @@ impl Renderer {
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("rootvg_vertex_buffer"),
             size: (std::mem::size_of::<Vertex>() * INIT_VERTICES_CAPACITY) as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -132,7 +136,7 @@ impl Renderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         view_physical_size: Size2D<u32>,
-        items: &[QueuedItem],
+        commands: &[QueuedDrawingCommand],
         mesh_cache: &MeshCache,
         total_num_vertices: usize,
     ) {
@@ -146,8 +150,9 @@ impl Renderer {
             );
         }
 
-        if items.len() > self.item_uniforms_capacity {
-            let new_size = (std::mem::size_of::<ItemUniforms>() * items.len()).next_power_of_two();
+        if commands.len() > self.item_uniforms_capacity {
+            let new_size =
+                (std::mem::size_of::<ItemUniforms>() * commands.len()).next_power_of_two();
             self.item_uniforms_capacity = new_size / std::mem::size_of::<ItemUniforms>();
 
             self.item_uniforms_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -170,13 +175,13 @@ impl Renderer {
             });
         }
 
-        for (i, item) in items.iter().enumerate() {
-            if item.copy_verts {
-                let Some(mesh) = mesh_cache.get(item.mesh_id) else {
+        for (i, cmd) in commands.iter().enumerate() {
+            if cmd.copy_verts {
+                let Some(mesh) = mesh_cache.get(cmd.mesh_id) else {
                     continue;
                 };
 
-                let vertices = if item.is_stroke {
+                let vertices = if cmd.is_stroke {
                     &mesh.stroke_verts
                 } else {
                     &mesh.fill_verts
@@ -189,7 +194,7 @@ impl Renderer {
                 let mut vertex_writer = queue
                     .write_buffer_with(
                         &self.vertex_buffer,
-                        (item.vert_range.start * std::mem::size_of::<Vertex>())
+                        (cmd.vert_range.start as usize * std::mem::size_of::<Vertex>())
                             as wgpu::BufferAddress,
                         NonZero::new((vertices.len() * std::mem::size_of::<Vertex>()) as u64)
                             .unwrap(),
@@ -207,22 +212,27 @@ impl Renderer {
                 )
                 .unwrap();
 
-            item_writer.copy_from_slice(bytemuck::cast_slice(&[item.uniforms]));
+            item_writer.copy_from_slice(bytemuck::cast_slice(&[cmd.uniforms]));
         }
     }
 
     pub fn render<'pass>(
         &'pass self,
         render_pass: &mut wgpu::RenderPass<'pass>,
-        items: &[QueuedItem],
+        commands: &[QueuedDrawingCommand],
     ) {
         render_pass.set_bind_group(0, &self.vert_uniforms_bind_group, &[]);
-        render_pass.set_bind_group(1, &self.item_uniforms_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_pipeline(&self.main_pipeline.pipeline);
 
-        for (i, item) in items.iter().enumerate() {
-            todo!()
+        for (i, cmd) in commands.iter().enumerate() {
+            render_pass.set_bind_group(
+                1,
+                &self.item_uniforms_bind_group,
+                &[(i * std::mem::size_of::<ItemUniforms>()) as u32],
+            );
+
+            render_pass.draw(cmd.vert_range.clone(), 0..1);
         }
     }
 }
@@ -261,8 +271,8 @@ impl Pipeline {
                 },
             }),
             primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                front_face: wgpu::FrontFace::Cw,
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                //cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },
             depth_stencil: None,
@@ -394,7 +404,7 @@ impl ItemUniforms {
     }
 }
 
-fn xform_to_mat3x4(t: &Transform2D<f32>) -> [f32; 12] {
+const fn xform_to_mat3x4(t: &Transform2D<f32>) -> [f32; 12] {
     [
         t.m11, t.m12, 0.0, 0.0, t.m21, t.m22, 0.0, 0.0, t.m31, t.m32, 1.0, 0.0,
     ]

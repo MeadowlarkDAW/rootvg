@@ -1,18 +1,14 @@
 use euclid::default::{Point2D, Vector2D};
 
-mod builder;
+pub(crate) mod builder;
 pub(crate) mod cache;
-mod commands;
+pub(crate) mod commands;
 pub(crate) mod tessellator;
 
-use self::builder::MeshBuilderInner;
-use self::commands::{Command, CommandIterator, PackedCommandBuffer};
+use self::commands::Command;
 use self::tessellator::Tessellator;
 
-pub use self::builder::MeshBuilder;
-pub use self::cache::MeshID;
-
-pub const DEFAULT_MITER_LIMIT: f32 = 10.0;
+pub use self::cache::{CachedMeshID, MeshID, RawMeshID, UncachedMeshID};
 
 /// Length proportional to radius of a cubic bezier handle for 90deg arcs
 const KAPPA90: f32 = 0.5522847493;

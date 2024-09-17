@@ -3,13 +3,14 @@ use euclid::default::{Point2D, Size2D, Transform2D};
 pub mod color;
 mod context;
 pub mod math;
-pub mod mesh;
+mod mesh;
 mod paint;
 pub mod pipeline;
 
 pub use color::Color;
-pub use context::{Context, ContextRef};
-pub use paint::Paint;
+pub use context::{ActiveContext, Context};
+pub use mesh::{CachedMeshID, MeshID, RawMeshID, UncachedMeshID};
+pub use paint::*;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -30,7 +31,7 @@ impl Winding {
     }
 }
 
-#[repr(i32)]
+#[repr(u8)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LineCap {
     #[default]
@@ -41,7 +42,7 @@ pub enum LineCap {
     Miter,
 }
 
-#[repr(i32)]
+#[repr(u8)]
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LineJoin {
     #[default]

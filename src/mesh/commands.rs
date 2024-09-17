@@ -4,9 +4,17 @@ use std::hash::Hash;
 
 use crate::Winding;
 
-const INIT_COMMANDS_SIZE: usize = 128;
+// This number is chosen so that `MeshCacheKey` is exactly
+// 256 bytes in size.
+pub const INIT_COMMANDS_SIZE: usize = 230;
 
-pub(super) enum Command {
+struct BezierTo {
+    pos: Point2D<f32>,
+    h1_pos: Point2D<f32>,
+    h2_pos: Point2D<f32>,
+}
+
+pub(crate) enum Command {
     MoveTo(Point2D<f32>),
     LineTo(Point2D<f32>),
     BezierTo {
@@ -42,8 +50,8 @@ impl CommandType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(super) struct PackedCommandBuffer {
-    pub data: SmallVec<[u8; INIT_COMMANDS_SIZE]>,
+pub(crate) struct PackedCommandBuffer {
+    data: SmallVec<[u8; INIT_COMMANDS_SIZE]>,
 }
 
 impl PackedCommandBuffer {
@@ -51,6 +59,10 @@ impl PackedCommandBuffer {
         Self {
             data: SmallVec::new(),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.data.clear();
     }
 
     pub fn move_to(&mut self, pos: Point2D<f32>) {
@@ -92,6 +104,10 @@ impl PackedCommandBuffer {
             data: &self.data,
             curr: 0,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
 }
 

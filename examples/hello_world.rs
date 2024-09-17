@@ -1,5 +1,9 @@
 use euclid::default::Size2D;
+use euclid::rect;
+use rgb::RGBA8;
+use rootvg::{MeshOpts, Paint};
 use std::sync::Arc;
+use wgpu::MultisampleState;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -45,6 +49,26 @@ impl ApplicationHandler for MyApp {
 
         match event {
             WindowEvent::RedrawRequested => {
+                {
+                    let mut vg = state.vg.begin_frame(state.view_size, state.scale_factor);
+
+                    let mesh = vg
+                        .begin_mesh()
+                        .rect(rect(30.0, 20.0, 50.0, 60.0))
+                        .build(MeshOpts::new().fill(true).stroke_width(4.0).anti_alias(false));
+
+                    vg.paint_fill(mesh, Paint::SolidColor((0.5, 0.4, 0.3, 1.0).into()));
+                    //vg.paint_stroke(mesh, Paint::SolidColor((0.6, 0.4, 0.6, 1.0).into()));
+
+                    let mesh = vg
+                        .begin_mesh()
+                        .rounded_rect(rect(100.0, 200.0, 50.0, 60.0), 6.0)
+                        .build(MeshOpts::new().fill(true).stroke_width(4.0));
+
+                    vg.paint_fill(mesh, Paint::SolidColor((0.5, 0.4, 0.6, 1.0).into()));
+                    //vg.paint_stroke(mesh, Paint::SolidColor((0.7, 0.4, 0.7, 1.0).into()));
+                }
+
                 let frame = state
                     .surface
                     .get_current_texture()
@@ -70,6 +94,9 @@ impl ApplicationHandler for MyApp {
                         timestamp_writes: None,
                         occlusion_query_set: None,
                     });
+
+                    state.vg.prepare(&state.device, &state.queue);
+                    state.vg.render(&mut render_pass);
                 }
 
                 state.queue.submit(Some(encoder.finish()));
@@ -91,11 +118,14 @@ impl ApplicationHandler for MyApp {
 }
 
 struct State {
+    vg: rootvg::Context,
+
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     surface_config: wgpu::SurfaceConfiguration,
     view_size: Size2D<u32>,
+    scale_factor: f32,
     window: Arc<Window>,
 }
 
@@ -107,6 +137,7 @@ impl State {
     async fn new_async(window: Arc<Window>) -> Self {
         let size = window.inner_size();
         let view_size = Size2D::new(size.width, size.height);
+        let scale_factor = window.scale_factor() as f32;
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -146,13 +177,25 @@ impl State {
 
         println!("{:?}", &surface_config);
 
+        let texture_format = surface_config.format;
+
+        let vg = rootvg::Context::new(
+            &device,
+            texture_format,
+            MultisampleState::default(),
+            scale_factor,
+            true,
+        );
+
         Self {
+            vg,
             surface,
             device,
             queue,
             surface_config,
             window,
             view_size,
+            scale_factor,
         }
     }
 }

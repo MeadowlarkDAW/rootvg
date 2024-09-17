@@ -7,7 +7,7 @@ use vec1::Vec1;
 
 use crate::{vert, LineCap, LineJoin, Vertex, Winding};
 
-use super::{Command, MeshBuilder};
+use super::{cache::MeshCacheKey, Command};
 
 const INIT_POINTS_SIZE: usize = 128;
 const INIT_PATHS_SIZE: usize = 16;
@@ -53,16 +53,19 @@ impl Tessellator {
         }
     }
 
+    pub fn dist_tol(&self) -> f32 {
+        self.dist_tol
+    }
+
     pub(super) fn tessellate(
         &mut self,
-        builder: &MeshBuilder,
+        key: &MeshCacheKey,
         stroke_verts: &mut Vec<Vertex>,
         fill_verts: &mut Vec<Vertex>,
-        antialias: bool,
     ) {
-        let stroke_width = f32::from_ne_bytes(builder.inner.stroke_width_bytes);
+        let stroke_width = f32::from_ne_bytes(key.stroke_width_bytes);
 
-        if !builder.inner.fill && stroke_width <= 0.0 {
+        if !key.fill && stroke_width <= 0.0 {
             return;
         }
 
@@ -71,7 +74,7 @@ impl Tessellator {
         *self.paths.first_mut() = PathState::new(0);
 
         // flatten
-        for cmd in builder.inner.command_buffer.iter() {
+        for cmd in key.command_buffer.iter() {
             match cmd {
                 Command::MoveTo(pos) => {
                     self.paths.push(PathState::new(self.points.len()));
@@ -161,17 +164,16 @@ impl Tessellator {
             }
         }
 
-        let fringe_width = if antialias { self.fringe_width } else { 0.0 };
+        let fringe_width = if key.antialias {
+            self.fringe_width
+        } else {
+            0.0
+        };
 
-        let miter_limit = f32::from_ne_bytes(builder.inner.miter_limit_bytes).max(0.0);
+        let miter_limit = f32::from_ne_bytes(key.miter_limit_bytes).max(0.0);
 
-        if builder.inner.fill {
-            self.expand_fill(
-                fill_verts,
-                fringe_width,
-                builder.inner.line_join,
-                miter_limit,
-            );
+        if key.fill {
+            self.expand_fill(fill_verts, fringe_width, key.line_join, miter_limit);
         }
 
         if stroke_width > 0.0 {
@@ -179,8 +181,8 @@ impl Tessellator {
                 stroke_verts,
                 stroke_width * 0.5,
                 fringe_width,
-                builder.inner.line_cap,
-                builder.inner.line_join,
+                key.line_cap,
+                key.line_join,
                 miter_limit,
             )
         }
@@ -451,18 +453,25 @@ impl Tessellator {
         // Calculate max vertex usage
         let mut vert_capacity = 0;
         for path in self.paths.iter() {
-            vert_capacity += path.num_points + path.num_bevels + 1;
+            vert_capacity += (path.num_points + path.num_bevels + 1) * 3;
 
             if fringe {
                 // plus one for loop
-                vert_capacity += (path.num_points + path.num_bevels * 5 + 1) * 2;
+                vert_capacity += (path.num_points + path.num_bevels * 5 + 1) * 6;
             }
         }
 
         verts.reserve(vert_capacity);
 
+        // TODO: the original NanoVG algorithm constructs a triangle fan, but wgpu
+        // does not support triangle fans. So for the algorithm has been modified a bit
+        // to construct a triangle list instead.
+        //
+        // However, this is quite wasteful as it creates almost 3 times the number of
+        // vertices. It would be better to use an algorithm that converts a triangle fan
+        // into a triangle strip.
         for path in self.paths.iter_mut() {
-            if path.num_points < 2 {
+            if path.num_points < 3 {
                 continue;
             }
 
@@ -496,15 +505,19 @@ impl Tessellator {
                     process_pair(&pts[i - 1], &pts[i], verts);
                 }
             } else {
-                for p in pts.iter() {
+                let first_vert = vert(pts[0].pos, point2(0.5, 1.0));
+                verts.push(first_vert);
+
+                for p in pts.iter().skip(1) {
                     verts.push(vert(p.pos, point2(0.5, 1.0)));
+                    verts.push(first_vert);
                 }
             }
 
             path.num_fill_verts = verts.len() - path.fill_vert_start_index;
 
             // Calculate fringe
-            if fringe {
+            if fringe && false {
                 let (lw, lu) = if path.convex {
                     // Create only half a fringe for convex shapes so that
                     // the shape can be rendered without stenciling.

@@ -68,6 +68,11 @@ const TEXTURE_COPY_UNCLIPPED: u32 = 6;
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     var result: vec4f;
 
+    let scissor = scissor_mask(input.fpos);
+    if scissor < 0.01 {
+        discard;
+    }
+
     var stroke_alpha = 1.0;
     if EDGE_AA {
         if item_uniforms.type_ != TEXTURE_COPY_UNCLIPPED {
@@ -100,8 +105,6 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
         // todo
         discard;
     }
-
-    let scissor = scissor_mask(input.fpos);
 
     if item_uniforms.type_ != SHADER_TYPE_STENCIL && item_uniforms.type_ != SHADER_TYPE_FILTER_IMAGE {
         // Combine alpha
